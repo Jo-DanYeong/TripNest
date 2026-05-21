@@ -3,6 +3,8 @@ package com.example.tripnest.data;
 import android.content.Context;
 import android.content.SharedPreferences;
 
+import com.example.tripnest.model.AuthResult;
+
 public class AuthSession {
 
     private static final String PREFS_NAME = "tripnest_auth";
@@ -33,7 +35,7 @@ public class AuthSession {
         return prefs.getString(KEY_NAME, "");
     }
 
-    public void save(BackendClient.AuthResult result) {
+    public void save(AuthResult result) {
         if (result == null || result.user == null) {
             return;
         }
