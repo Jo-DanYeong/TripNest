@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Primary -->
+    <color name="primary">#16785F</color>
+    <color name="primary_dark">#0D4F40</color>
+    <color name="primary_light">#E7F4EF</color>
+
+    <!-- Accent (Amber) -->
+    <color name="accent">#C7781B</color>
+    <color name="accent_light">#FFF3DE</color>
+
+    <!-- Danger -->
+    <color name="danger">#E24B4A</color>
+    <color name="danger_light">#FCEBEB</color>
+
+    <!-- Neutral -->
+    <color name="white">#FFFFFF</color>
+    <color name="background">#F7F8F7</color>
+    <color name="card_bg">#FFFFFF</color>
+    <color name="text_primary">#18211E</color>
+    <color name="text_secondary">#66706C</color>
+    <color name="divider">#E2E8E4</color>
+    <color name="status_bar">#0D4F40</color>
+    <color name="surface_tint">#F0F7F4</color>
+    <color name="ink_muted">#42524C</color>
+</resources>

@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: tripnest-backend
+    runtime: docker
+    dockerContext: .
+    dockerfilePath: ./Dockerfile
+    envVars:
+      - key: PORT
+        value: 8080
+      - key: GROQ_MODEL
+        value: llama-3.3-70b-versatile
