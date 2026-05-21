@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import http from "node:http";
+import { spawnSync } from "node:child_process";
 import { URL } from "node:url";
 
 const config = loadEnv();
@@ -7,21 +8,22 @@ const port = Number(config.PORT || 8080);
 const host = config.HOST || "0.0.0.0";
 
 const server = http.createServer(async (req, res) => {
-  const url = new URL(req.url, `http://${req.headers.host}`);
   setCorsHeaders(res);
 
   if (req.method === "OPTIONS") {
-    res.writeHead(204);
-    res.end();
+    sendEmpty(res, 204);
     return;
   }
 
   try {
+    const url = new URL(req.url || "/", `http://${req.headers.host || "localhost"}`);
+
     if (req.method === "GET" && url.pathname === "/api/health") {
       sendJson(res, 200, {
         ok: true,
         service: "TripNest Backend",
-        kakaoRestKeyConfigured: Boolean(config.KAKAO_REST_API_KEY)
+        kakaoRestKeyConfigured: Boolean(config.KAKAO_REST_API_KEY),
+        groqConfigured: Boolean(config.GROQ_API_KEY)
       });
       return;
     }
@@ -34,30 +36,84 @@ const server = http.createServer(async (req, res) => {
 
     if (req.method === "POST" && url.pathname === "/api/trips/recommendations") {
       const body = await readJson(req);
-      sendJson(res, 200, await buildRecommendation(body));
+      const result = await buildRecommendation(body);
+      sendJson(res, 200, result);
       return;
     }
 
     if (req.method === "POST" && url.pathname === "/api/maps/nearby") {
       const body = await readJson(req);
-      sendJson(res, 200, await findNearbyPlaces(body));
+      const result = await findNearbyPlaces(body);
+      sendJson(res, 200, result);
       return;
     }
 
-    sendJson(res, 404, { error: "Not found" });
+    sendJson(res, 404, { error: "요청한 API를 찾을 수 없습니다." });
   } catch (error) {
-    console.error(error);
-    sendJson(res, 500, { error: "Internal server error", message: error.message });
+    console.error("[server-error]", error);
+    sendJson(res, 500, {
+      error: "서버 처리 중 오류가 발생했습니다.",
+      message: error?.message || String(error)
+    });
   }
 });
+
+server.on("error", (error) => {
+  console.error("[listen-error]", error);
+});
+
+setupAdbReverse(port);
 
 server.listen(port, host, () => {
   console.log(`TripNest backend listening on http://${host}:${port}`);
 });
 
+function setupAdbReverse(targetPort) {
+  if (String(config.ENABLE_ADB_REVERSE || "true").toLowerCase() === "false") {
+    return;
+  }
+
+  const adbPath = findAdbPath();
+  if (!adbPath) {
+    console.warn("[adb-reverse] adb not found. Set ADB_PATH in backend/.env if you need a physical phone connection.");
+    return;
+  }
+
+  const result = spawnSync(adbPath, ["reverse", `tcp:${targetPort}`, `tcp:${targetPort}`], {
+    encoding: "utf8",
+    timeout: 5000,
+    windowsHide: true
+  });
+
+  if (result.status === 0) {
+    console.log(`[adb-reverse] tcp:${targetPort} -> tcp:${targetPort} ready`);
+    return;
+  }
+
+  const message = (result.stderr || result.stdout || result.error?.message || "").trim();
+  console.warn(`[adb-reverse] failed: ${message || "check USB debugging connection"}`);
+}
+
+function findAdbPath() {
+  const candidates = [
+    config.ADB_PATH,
+    config.LOCALAPPDATA ? `${config.LOCALAPPDATA}\\Android\\Sdk\\platform-tools\\adb.exe` : "",
+    config.ANDROID_HOME ? `${config.ANDROID_HOME}\\platform-tools\\adb.exe` : "",
+    config.ANDROID_SDK_ROOT ? `${config.ANDROID_SDK_ROOT}\\platform-tools\\adb.exe` : "",
+    "adb"
+  ].filter(Boolean);
+
+  for (const candidate of candidates) {
+    if (candidate === "adb" || fs.existsSync(candidate)) {
+      return candidate;
+    }
+  }
+  return "";
+}
+
 async function buildRecommendation(body) {
   const destination = normalizeText(body.destination, "");
-  const durationDays = Math.max(1, Math.min(14, Number(body.durationDays || 3)));
+  const durationDays = clampNumber(body.durationDays, 3, 1, 14);
   const styles = Array.isArray(body.styles) && body.styles.length > 0
     ? body.styles.map(String)
     : ["자연", "맛집", "코스"];
@@ -74,7 +130,7 @@ async function buildRecommendation(body) {
     };
   }
 
-  const rawSources = getMockSources(destination);
+  const rawSources = getSources(destination);
   const trustedSources = rawSources.filter((source) => !source.ad);
   const places = await searchRecommendedPlaces(destination);
   const summary = await createAiSummary({ destination, durationDays, styles, places, trustedSources });
@@ -93,10 +149,10 @@ async function buildRecommendation(body) {
 async function findNearbyPlaces(body) {
   const latitude = Number(body.latitude);
   const longitude = Number(body.longitude);
-  const radiusMeters = Math.max(300, Math.min(20000, Number(body.radiusMeters || 2000)));
+  const radiusMeters = clampNumber(body.radiusMeters, 2000, 300, 20000);
 
   if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
-    throw new Error("latitude and longitude are required.");
+    throw new Error("위도와 경도가 필요합니다.");
   }
 
   const [stays, attractions, restaurants] = await Promise.all([
@@ -129,8 +185,8 @@ async function searchRecommendedPlaces(destination) {
 
   const results = [];
   for (const item of keywords) {
-    const places = await searchKakaoKeyword(item.query, { size: 1 });
-    const place = places[0];
+    const places = await searchKakaoKeyword(item.query, { size: 3 });
+    const place = places.find((candidate) => candidate.name) || places[0];
     if (place) {
       results.push({
         name: place.name,
@@ -143,13 +199,13 @@ async function searchRecommendedPlaces(destination) {
       });
     }
   }
-  return results;
+  return dedupePlaces(results).slice(0, 6);
 }
 
 async function searchNearby(categoryCode, keyword, longitude, latitude, radiusMeters) {
-  const categoryResults = await searchKakaoCategory(categoryCode, longitude, latitude, radiusMeters);
-  if (categoryResults.length > 0) {
-    return categoryResults;
+  const byCategory = await searchKakaoCategory(categoryCode, longitude, latitude, radiusMeters);
+  if (byCategory.length > 0) {
+    return byCategory;
   }
   return searchKakaoKeyword(keyword, { longitude, latitude, radiusMeters, size: 10 });
 }
@@ -157,8 +213,10 @@ async function searchNearby(categoryCode, keyword, longitude, latitude, radiusMe
 async function createAiSummary({ destination, durationDays, styles, places, trustedSources }) {
   const placeNames = places.map((place) => place.name).filter(Boolean).join(", ");
   const fallbackSummary =
-    `${destination} ${durationDays}일 일정을 기준으로 광고성 문구를 줄이고 정보를 정리했습니다. ` +
-    (placeNames ? `추천 후보는 ${placeNames}입니다.` : "카카오 장소 검색 결과를 기다리는 중입니다.");
+    `${destination} ${durationDays}일 여행 기준으로 광고성 문구를 제외하고 믿을 만한 정보만 정리했습니다. ` +
+    (placeNames
+      ? `추천 후보는 ${placeNames}입니다.`
+      : "지도에서 위치를 선택하면 주변 숙소, 관광지, 음식점을 더 정확히 찾을 수 있습니다.");
 
   if (!config.GROQ_API_KEY) {
     return fallbackSummary;
@@ -167,7 +225,7 @@ async function createAiSummary({ destination, durationDays, styles, places, trus
   const prompt = [
     `여행지: ${destination}`,
     `기간: ${durationDays}일`,
-    `스타일: ${styles.join(", ")}`,
+    `여행 스타일: ${styles.join(", ")}`,
     `추천 장소: ${placeNames || "아직 없음"}`,
     `신뢰 출처 수: ${trustedSources.length}`,
     "광고성 표현은 제외하고 한국어로 2문장 요약해 주세요."
@@ -183,7 +241,7 @@ async function createAiSummary({ destination, durationDays, styles, places, trus
       body: JSON.stringify({
         model: config.GROQ_MODEL || "llama-3.3-70b-versatile",
         messages: [
-          { role: "system", content: "너는 한국어 여행 요약을 제공하는 도우미다." },
+          { role: "system", content: "당신은 한국어 여행 정보를 간결하게 요약하는 도우미입니다." },
           { role: "user", content: prompt }
         ],
         temperature: 0.4,
@@ -197,7 +255,8 @@ async function createAiSummary({ destination, durationDays, styles, places, trus
 
     const data = await response.json();
     return data.choices?.[0]?.message?.content?.trim() || fallbackSummary;
-  } catch {
+  } catch (error) {
+    console.error("[groq-error]", error?.message || error);
     return fallbackSummary;
   }
 }
@@ -209,10 +268,18 @@ async function checkKakaoLocalApi() {
 
   const places = await searchKakaoKeyword("서울역", { size: 1, includeStatus: true });
   if (places.status && places.status !== 200) {
-    return { ok: false, status: places.status, message: places.message || "카카오 Local API 호출 실패" };
+    return {
+      ok: false,
+      status: places.status,
+      message: places.message || "카카오 Local API 호출에 실패했습니다."
+    };
   }
 
-  return { ok: places.length > 0, status: 200, samplePlaceName: places[0]?.name || "" };
+  return {
+    ok: places.length > 0,
+    status: places.status || 200,
+    samplePlaceName: places[0]?.name || ""
+  };
 }
 
 async function searchKakaoCategory(categoryCode, longitude, latitude, radiusMeters) {
@@ -271,10 +338,11 @@ async function requestKakaoPlaces(url, options = {}) {
     }
     return places;
   } catch (error) {
+    console.error("[kakao-error]", error?.message || error);
     const result = [];
     if (options.includeStatus) {
       result.status = 0;
-      result.message = error.message;
+      result.message = error?.message || String(error);
     }
     return result;
   }
@@ -294,12 +362,24 @@ function mapKakaoPlace(place) {
   };
 }
 
-function getMockSources(destination) {
+function dedupePlaces(places) {
+  const seen = new Set();
+  return places.filter((place) => {
+    const key = `${place.name}|${place.address}`;
+    if (seen.has(key)) {
+      return false;
+    }
+    seen.add(key);
+    return true;
+  });
+}
+
+function getSources(destination) {
   return [
     { title: `${destination} 공식 관광 정보`, type: "public", ad: false },
     { title: `${destination} 실제 방문 후기`, type: "review", ad: false },
     { title: `${destination} 숙소 광고형 콘텐츠`, type: "blog", ad: true },
-    { title: `${destination} 로컬 맛집 탐방 기록`, type: "review", ad: false },
+    { title: `${destination} 로컬 맛집 방문 기록`, type: "review", ad: false },
     { title: `${destination} 체험형 광고 콘텐츠`, type: "blog", ad: true }
   ];
 }
@@ -318,7 +398,7 @@ function readJson(req) {
     req.on("data", (chunk) => {
       raw += chunk;
       if (raw.length > 1_000_000) {
-        reject(new Error("Request body is too large"));
+        reject(new Error("요청 본문이 너무 큽니다."));
         req.destroy();
       }
     });
@@ -330,7 +410,7 @@ function readJson(req) {
       try {
         resolve(JSON.parse(raw));
       } catch {
-        reject(new Error("Invalid JSON body"));
+        reject(new Error("JSON 형식이 올바르지 않습니다."));
       }
     });
     req.on("error", reject);
@@ -342,6 +422,11 @@ function sendJson(res, statusCode, payload) {
   res.end(JSON.stringify(payload));
 }
 
+function sendEmpty(res, statusCode) {
+  res.writeHead(statusCode);
+  res.end();
+}
+
 function setCorsHeaders(res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
@@ -350,6 +435,14 @@ function setCorsHeaders(res) {
 
 function normalizeText(value, fallback) {
   return typeof value === "string" && value.trim() ? value.trim() : fallback;
+}
+
+function clampNumber(value, fallback, min, max) {
+  const number = Number(value);
+  if (!Number.isFinite(number)) {
+    return fallback;
+  }
+  return Math.max(min, Math.min(max, number));
 }
 
 function loadEnv() {
@@ -375,8 +468,8 @@ function loadEnv() {
         env[key] = value;
       }
     }
-  } catch {
-    return env;
+  } catch (error) {
+    console.error("[env-error]", error?.message || error);
   }
   return env;
 }
