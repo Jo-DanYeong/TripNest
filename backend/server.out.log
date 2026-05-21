@@ -1,2 +1,0 @@
-[adb-reverse] tcp:8080 -> tcp:8080 ready
-TripNest backend listening on http://0.0.0.0:8080
