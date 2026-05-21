@@ -1,89 +1,65 @@
 # TripNest
 
-TripNest는 사용자가 지도에서 여행 위치를 선택하면 주변 숙소, 관광지, 음식점을 찾아주고 AI로 여행 정보를 요약해 주는 Android 여행 추천 앱입니다.
+TripNest는 여행지를 검색하면 AI 요약과 추천 장소를 보여주고, 지도에서 선택한 위치 주변의 숙소, 관광지, 음식점을 확인할 수 있는 Android 여행 추천 앱입니다.
 
-## 주요 기능
-
-- 여행지 검색 기반 추천 장소 제공
-- 지도에서 위치 선택 후 주변 숙소, 관광지, 음식점 조회
-- Groq AI API를 이용한 한국어 여행 요약
-- 카카오 Local REST API 기반 실제 장소 검색
-- 실물 Android 기기 테스트를 위한 `adb reverse` 자동 연결
-
-## 프로젝트 구조
+## 구성
 
 ```text
 TripNest/
-├─ app/                 # Android 앱(Java/XML)
-├─ backend/             # Node.js 백엔드 API 서버
-├─ gradle/              # Gradle wrapper files
-├─ local.properties     # Android 로컬 설정, Git 제외 권장
-└─ README.md            # 프로젝트 통합 문서
+├─ app/        Android 앱(Java/XML)
+├─ backend/    Node.js API 서버
+└─ gradle/     Gradle wrapper
 ```
 
-## 기술 스택
+## 주요 기능
 
-- Android: Java, XML, AndroidX Navigation, Material Components, osmdroid
-- Backend: Node.js ESM, 기본 `http` 서버
-- AI: Groq Chat Completions API
-- Map/Places: Kakao Native App Key, Kakao REST API Key
+- 이메일/비밀번호 회원가입 및 로그인
+- 로그인 세션 저장과 마이페이지 로그아웃
+- 여행지 검색 기반 추천 장소 조회
+- 지도 위치 선택 후 주변 장소 조회
+- Groq AI 요약, Kakao Local API 장소 검색
 
-## 필요한 키
+## Android 설정
 
-카카오 개발자 콘솔에서는 용도별로 키를 나눠 사용합니다.
-
-- Android 앱 지도/SDK: Native App Key
-- 백엔드 장소 검색: REST API Key
-- 웹 지도: JavaScript Key
-
-이 프로젝트에서는 Android 앱에 Native App Key를 넣고, 백엔드 `.env`에 REST API Key를 넣습니다.
-
-## 환경 설정
-
-### Android `local.properties`
-
-루트의 `local.properties`에 다음 값을 설정합니다.
+루트의 `local.properties`에 백엔드 주소와 Kakao Native App Key를 설정합니다.
 
 ```properties
 BACKEND_BASE_URL=http://127.0.0.1:8080
 BACKEND_FALLBACK_URL=http://127.0.0.1:8080
-KAKAO_NATIVE_APP_KEY=카카오_네이티브_앱_키
+KAKAO_NATIVE_APP_KEY=your_kakao_native_app_key
 ```
 
-실물폰에서 USB 디버깅으로 테스트할 때는 `127.0.0.1:8080`을 사용하고, 백엔드가 자동으로 `adb reverse tcp:8080 tcp:8080`을 실행합니다.
+실기기에서 USB 디버깅으로 테스트하면 백엔드가 시작될 때 `adb reverse tcp:8080 tcp:8080`을 자동으로 시도합니다.
 
-### Backend `.env`
+## Backend 설정
 
-`backend/.env.example`을 복사해 `backend/.env`를 만들고 값을 채웁니다.
+`backend/.env`를 만들고 필요한 값을 채웁니다.
 
 ```env
 PORT=8080
-GROQ_API_KEY=Groq_API_Key
+AUTH_SECRET=change_this_to_a_long_random_secret
+AUTH_TOKEN_TTL_SECONDS=604800
+GROQ_API_KEY=your_groq_api_key
 GROQ_MODEL=llama-3.3-70b-versatile
-KAKAO_REST_API_KEY=카카오_REST_API_키
+KAKAO_REST_API_KEY=your_kakao_rest_api_key
 ```
 
-선택값:
+선택 값:
 
 ```env
-ADB_PATH=C:\Users\사용자명\AppData\Local\Android\Sdk\platform-tools\adb.exe
+ADB_PATH=C:\Users\username\AppData\Local\Android\Sdk\platform-tools\adb.exe
 ENABLE_ADB_REVERSE=true
 ```
 
-`ADB_PATH`를 지정하지 않아도 일반적인 Android Studio 설치 경로와 PATH의 `adb`를 자동으로 찾습니다.
+회원 정보는 개발용으로 `backend/data/users.json`에 저장됩니다. 이 폴더는 Git에서 제외되어 있습니다. 실제 서비스 배포에서는 데이터베이스로 교체하는 것을 권장합니다.
 
-## 백엔드 실행
+## 실행
+
+백엔드:
 
 ```powershell
 cd backend
 npm run dev
-```
-
-서버가 정상 실행되면 다음과 비슷한 로그가 나옵니다.
-
-```text
-[adb-reverse] tcp:8080 -> tcp:8080 ready
-TripNest backend listening on http://0.0.0.0:8080
 ```
 
 상태 확인:
@@ -92,15 +68,7 @@ TripNest backend listening on http://0.0.0.0:8080
 Invoke-RestMethod http://127.0.0.1:8080/api/health
 ```
 
-카카오 API 확인:
-
-```powershell
-Invoke-RestMethod http://127.0.0.1:8080/api/debug/kakao
-```
-
-## Android 앱 실행
-
-Android Studio에서 프로젝트 루트 `TripNest`를 열고 `app` 모듈을 실행합니다.
+Android 앱은 Android Studio에서 루트 폴더를 열고 `app` 모듈을 실행합니다.
 
 CLI 빌드:
 
@@ -108,79 +76,56 @@ CLI 빌드:
 .\gradlew.bat assembleDebug
 ```
 
-생성 APK:
+## 인증 API
 
-```text
-app/build/outputs/apk/debug/app-debug.apk
-```
-
-실물폰 테스트 시 체크할 것:
-
-- USB 디버깅 허용
-- 백엔드 서버 실행 중
-- `local.properties`의 `BACKEND_BASE_URL`이 `http://127.0.0.1:8080`
-- 앱이 최신 APK로 다시 설치되어 있음
-
-## API
-
-### `GET /api/health`
-
-백엔드 상태와 키 설정 여부를 확인합니다.
-
-### `GET /api/debug/kakao`
-
-카카오 Local API 연결 상태를 확인합니다.
-
-### `POST /api/trips/recommendations`
-
-여행지 검색어를 기준으로 AI 요약과 추천 장소를 반환합니다.
-
-요청 예시:
+### `POST /api/auth/register`
 
 ```json
 {
-  "destination": "서울",
-  "durationDays": 3,
-  "styles": ["자연", "맛집", "코스"]
+  "name": "홍길동",
+  "email": "hong@example.com",
+  "password": "password123"
 }
 ```
 
-### `POST /api/maps/nearby`
-
-선택한 좌표 주변의 숙소, 관광지, 음식점을 반환합니다.
-
-요청 예시:
+### `POST /api/auth/login`
 
 ```json
 {
-  "latitude": 37.5665,
-  "longitude": 126.978,
-  "radiusMeters": 2000
+  "email": "hong@example.com",
+  "password": "password123"
 }
 ```
 
-응답에는 `stays`, `attractions`, `restaurants` 배열이 포함됩니다.
+두 API 모두 성공하면 다음 형식으로 응답합니다.
 
-## 배포
-
-백엔드는 Docker 기반 배포를 지원합니다.
-
-```powershell
-docker build -t tripnest-backend ./backend
-docker run -p 8080:8080 --env-file ./backend/.env tripnest-backend
+```json
+{
+  "token": "jwt_token",
+  "user": {
+    "id": "user_id",
+    "email": "hong@example.com",
+    "name": "홍길동",
+    "createdAt": "2026-05-21T00:00:00.000Z"
+  }
+}
 ```
 
-Render, Railway, Fly.io 같은 컨테이너 호스팅에 배포할 수 있으며, 배포 후 Android `BACKEND_BASE_URL`을 실제 HTTPS API 도메인으로 바꾸면 됩니다.
+### `GET /api/auth/me`
 
-예시:
-
-```properties
-BACKEND_BASE_URL=https://api.tripnest.kr
-BACKEND_FALLBACK_URL=https://api.tripnest.kr
+```http
+Authorization: Bearer jwt_token
 ```
 
-## 주의 사항
+## 여행 API
 
-- `.env`와 `local.properties`에는 API 키가 들어가므로 공개 저장소에 올리지 마세요.
-- 실물폰에서 `127.0.0.1`은 원래 폰 자신을 의미하지만, `adb reverse`를 사용하면 폰의 `127.0.0.1:8080` 요청이 PC 백엔드로 전달됩니다.
-- `adb reverse`는 USB 연결이 끊기거나 기기를 재연결하면 풀릴 수 있습니다. 이 프로젝트의 백엔드는 시작 시 자동으로 다시 연결을 시도합니다.
+- `GET /api/health`: 백엔드 상태 확인
+- `GET /api/debug/kakao`: Kakao Local API 연결 확인
+- `POST /api/trips/recommendations`: 여행지 추천과 AI 요약
+- `POST /api/maps/nearby`: 선택 좌표 주변 장소 조회
+
+## 주의
+
+- `backend/.env`, `local.properties`, `backend/data/`는 공개 저장소에 올리지 않습니다.
+- `AUTH_SECRET`은 배포 환경에서 반드시 길고 예측하기 어려운 값으로 변경하세요.
+- 현재 인증 저장소는 로컬 개발용 JSON 파일입니다. 운영 환경에서는 PostgreSQL, MySQL, MongoDB 같은 영속 데이터베이스를 사용하세요.

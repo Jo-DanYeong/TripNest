@@ -11,6 +11,11 @@ import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
+import androidx.navigation.NavOptions;
+import androidx.navigation.Navigation;
+
+import com.example.tripnest.data.AuthSession;
+import com.google.android.material.button.MaterialButton;
 
 import java.util.Locale;
 
@@ -34,6 +39,19 @@ public class MyTripFragment extends Fragment {
         TextView titleView = view.findViewById(R.id.tv_my_trip_title);
         TextView bodyView = view.findViewById(R.id.tv_my_trip_body);
         TextView locationView = view.findViewById(R.id.tv_my_trip_location);
+        TextView accountView = view.findViewById(R.id.tv_account);
+        MaterialButton logoutButton = view.findViewById(R.id.btn_logout);
+        AuthSession session = new AuthSession(requireContext());
+
+        String displayName = session.getName().isEmpty() ? session.getEmail() : session.getName();
+        accountView.setText(getString(R.string.auth_signed_in_as, displayName));
+        logoutButton.setOnClickListener(v -> {
+            session.clear();
+            NavOptions options = new NavOptions.Builder()
+                    .setPopUpTo(R.id.nav_graph, true)
+                    .build();
+            Navigation.findNavController(view).navigate(R.id.loginFragment, null, options);
+        });
 
         SharedPreferences prefs = requireContext().getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
         String lastQuery = prefs.getString(KEY_LAST_QUERY, "");
