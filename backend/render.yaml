@@ -4,8 +4,13 @@ services:
     runtime: docker
     dockerContext: .
     dockerfilePath: ./Dockerfile
+    healthCheckPath: /api/health
     envVars:
       - key: PORT
         value: 8080
       - key: GROQ_MODEL
         value: llama-3.3-70b-versatile
+      - key: GROQ_API_KEY
+        sync: false
+      - key: KAKAO_REST_API_KEY
+        sync: false
