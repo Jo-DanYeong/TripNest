@@ -1,6 +1,7 @@
 package com.example.tripnest;
 
 import android.os.Bundle;
+import android.view.View;
 
 import androidx.activity.EdgeToEdge;
 import androidx.appcompat.app.AppCompatActivity;
@@ -35,6 +36,18 @@ public class MainActivity extends AppCompatActivity {
                 R.id.mapPickFragment,
                 R.id.myTripFragment
         ).build();
+
+        navController.addOnDestinationChangedListener((controller, destination, arguments) -> {
+            boolean isLogin = destination.getId() == R.id.loginFragment;
+            binding.bottomNav.setVisibility(isLogin ? View.GONE : View.VISIBLE);
+            if (destination.getId() == R.id.homeFragment) {
+                binding.bottomNav.setSelectedItemId(R.id.nav_home);
+            } else if (destination.getId() == R.id.mapPickFragment) {
+                binding.bottomNav.setSelectedItemId(R.id.nav_map);
+            } else if (destination.getId() == R.id.myTripFragment) {
+                binding.bottomNav.setSelectedItemId(R.id.nav_my);
+            }
+        });
 
         binding.bottomNav.setOnItemSelectedListener(item -> {
             int itemId = item.getItemId();

@@ -1,3 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">TripNest</string>
     <string name="action_settings">Settings</string>
@@ -5,6 +6,25 @@
     <string name="second_fragment_label">Result</string>
     <string name="next">Next</string>
     <string name="previous">Previous</string>
+
+    <string name="auth_login_title">다시 만나서 반가워요</string>
+    <string name="auth_login_subtitle">계정으로 로그인하고 여행 추천을 이어가세요.</string>
+    <string name="auth_register_title">TripNest 시작하기</string>
+    <string name="auth_register_subtitle">간단히 가입하고 나만의 여행 기록을 만들어 보세요.</string>
+    <string name="auth_name_hint">이름</string>
+    <string name="auth_email_hint">이메일</string>
+    <string name="auth_password_hint">비밀번호</string>
+    <string name="auth_login_button">로그인</string>
+    <string name="auth_register_button">회원가입</string>
+    <string name="auth_toggle_register">계정 만들기</string>
+    <string name="auth_toggle_login">로그인으로 돌아가기</string>
+    <string name="auth_loading">처리 중...</string>
+    <string name="auth_name_required">이름을 입력해 주세요.</string>
+    <string name="auth_email_required">올바른 이메일을 입력해 주세요.</string>
+    <string name="auth_password_required">비밀번호는 8자 이상이어야 합니다.</string>
+    <string name="auth_error_default">요청을 처리하지 못했습니다.</string>
+    <string name="auth_signed_in_as">%1$s 계정으로 로그인됨</string>
+    <string name="auth_logout">로그아웃</string>
 
     <string name="home_subtitle">흩어진 여행 정보를 한 번에</string>
     <string name="notifications">알림</string>
@@ -16,8 +36,8 @@
     <string name="style_city">도시</string>
     <string name="style_food">맛집</string>
     <string name="style_route">코스</string>
-    <string name="mvp_title">검색하면 요약과 추천이 시작됩니다</string>
-    <string name="mvp_description">여행지를 먼저 검색하고, 필요할 때만 지도로 위치를 선택해 주변 숙소와 관광지, 음식점을 확인하세요.</string>
+    <string name="mvp_title">검색하면 요약과 추천을 시작합니다</string>
+    <string name="mvp_description">여행지를 먼저 검색하고, 필요하면 지도에서 위치를 선택해 주변 숙소, 관광지, 음식점을 확인하세요.</string>
 
     <string name="back">뒤로가기</string>
     <string name="result_title_default">검색 결과</string>
@@ -28,7 +48,7 @@
     <string name="ad_filter_message">광고성 문구를 제외하고 신뢰 가능한 정보만 보여줍니다.</string>
     <string name="ad_filter_message_format">광고성 문구 %1$d개를 제외하고 신뢰 가능한 정보만 보여줍니다.</string>
     <string name="gemini_summary_title">AI 요약</string>
-    <string name="gemini_summary_text">여행지를 검색하면 요약이 표시됩니다.</string>
+    <string name="gemini_summary_text">여행지를 검색하면 요약을 표시합니다.</string>
     <string name="gemini_summary_fallback">요약 생성에 실패했습니다. 잠시 후 다시 시도해 주세요.</string>
     <string name="filter_all">전체</string>
     <string name="filter_stay">숙소</string>
@@ -37,9 +57,9 @@
     <string name="recommended_places">추천 장소</string>
     <string name="no_recommendations">추천 결과가 없습니다. 다른 키워드로 검색해 보세요.</string>
     <string name="recommendations_loading">추천 장소를 찾는 중입니다.</string>
-    <string name="recommendations_unavailable">추천 장소를 불러오지 못했습니다. 서버가 켜져 있고 휴대폰과 PC가 같은 Wi-Fi에 있는지 확인해 주세요.</string>
+    <string name="recommendations_unavailable">추천 장소를 불러오지 못했습니다. 서버가 켜져 있고 기기와 PC가 같은 네트워크에 있는지 확인해 주세요.</string>
 
-    <string name="nearby_optional_title">주변 정보가 필요할 때</string>
+    <string name="nearby_optional_title">주변 정보가 필요하신가요?</string>
     <string name="nearby_optional_body">지도에서 위치를 선택하면 그 주변의 숙소, 관광지, 음식점을 찾아드립니다.</string>
     <string name="selected_coord_format">선택 좌표: %1$.6f, %2$.6f</string>
     <string name="map_default_coord">아직 위치를 선택하지 않았습니다.</string>
@@ -49,8 +69,8 @@
     <string name="map_nearby_loading">주변 장소를 불러오는 중...</string>
     <string name="map_pick_title">지도에서 위치 선택</string>
     <string name="map_view_title">지도</string>
-    <string name="map_pick_hint">지도를 탭해서 위치를 선택해 주세요.</string>
-    <string name="map_pick_hint_center">지도를 움직여 핀을 원하는 위치에 맞춰 주세요.</string>
+    <string name="map_pick_hint">지도를 탭해 위치를 선택해 주세요.</string>
+    <string name="map_pick_hint_center">지도를 움직여 중앙 핀에 원하는 위치를 맞춰 주세요.</string>
     <string name="map_pick_confirm">선택 완료</string>
     <string name="map_current_location">현재 위치</string>
     <string name="map_location_unavailable">현재 위치를 가져올 수 없습니다.</string>
@@ -59,14 +79,14 @@
     <string name="nearby_label_attraction">관광: %1$s</string>
     <string name="nearby_label_food">음식: %1$s</string>
     <string name="nearby_error_format">주변 검색 실패: %1$s</string>
-    <string name="nearby_connection_help">주변 정보를 불러오지 못했습니다. 서버가 켜져 있고 휴대폰과 PC가 같은 Wi-Fi에 있는지 확인해 주세요.</string>
+    <string name="nearby_connection_help">주변 정보를 불러오지 못했습니다. 서버가 켜져 있고 기기와 PC가 같은 네트워크에 있는지 확인해 주세요.</string>
     <string name="no_data">데이터 없음</string>
 
     <string name="nav_home">홈</string>
     <string name="nav_map">지도</string>
     <string name="nav_my">내 여행</string>
     <string name="my_trip_title">내 여행</string>
-    <string name="my_trip_subtitle">최근 검색한 여행 정보를 모아봅니다</string>
+    <string name="my_trip_subtitle">최근 검색한 여행 정보를 모아봅니다.</string>
     <string name="my_trip_empty_title">아직 저장된 여행이 없습니다</string>
     <string name="my_trip_empty_body">홈에서 여행지를 검색하고 지도에서 위치를 선택하면 최근 여행 정보가 여기에 표시됩니다.</string>
     <string name="my_trip_recent">최근 여행</string>

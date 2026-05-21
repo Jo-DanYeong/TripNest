@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import http from "node:http";
+import crypto from "node:crypto";
 import { spawnSync } from "node:child_process";
 import { URL } from "node:url";
 
@@ -34,6 +35,26 @@ const server = http.createServer(async (req, res) => {
       return;
     }
 
+    if (req.method === "POST" && url.pathname === "/api/auth/register") {
+      const body = await readJson(req);
+      const result = await registerUser(body);
+      sendJson(res, 201, result);
+      return;
+    }
+
+    if (req.method === "POST" && url.pathname === "/api/auth/login") {
+      const body = await readJson(req);
+      const result = await loginUser(body);
+      sendJson(res, 200, result);
+      return;
+    }
+
+    if (req.method === "GET" && url.pathname === "/api/auth/me") {
+      const user = requireUser(req);
+      sendJson(res, 200, { user: publicUser(user) });
+      return;
+    }
+
     if (req.method === "POST" && url.pathname === "/api/trips/recommendations") {
       const body = await readJson(req);
       const result = await buildRecommendation(body);
@@ -51,7 +72,7 @@ const server = http.createServer(async (req, res) => {
     sendJson(res, 404, { error: "요청한 API를 찾을 수 없습니다." });
   } catch (error) {
     console.error("[server-error]", error);
-    sendJson(res, 500, {
+    sendJson(res, error.statusCode || 500, {
       error: "서버 처리 중 오류가 발생했습니다.",
       message: error?.message || String(error)
     });
@@ -109,6 +130,186 @@ function findAdbPath() {
     }
   }
   return "";
+}
+
+async function registerUser(body) {
+  const email = normalizeText(body.email, "").toLowerCase();
+  const name = normalizeText(body.name, "");
+  const password = typeof body.password === "string" ? body.password : "";
+
+  validateAuthInput(email, password, name, true);
+
+  const users = readUsers();
+  if (users.some((user) => user.email === email)) {
+    throw httpError(409, "이미 가입된 이메일입니다.");
+  }
+
+  const user = {
+    id: crypto.randomUUID(),
+    email,
+    name,
+    passwordHash: hashPassword(password),
+    createdAt: new Date().toISOString()
+  };
+  users.push(user);
+  writeUsers(users);
+
+  return issueAuthResponse(user);
+}
+
+async function loginUser(body) {
+  const email = normalizeText(body.email, "").toLowerCase();
+  const password = typeof body.password === "string" ? body.password : "";
+
+  validateAuthInput(email, password, "", false);
+
+  const user = readUsers().find((item) => item.email === email);
+  if (!user || !verifyPassword(password, user.passwordHash)) {
+    throw httpError(401, "이메일 또는 비밀번호가 올바르지 않습니다.");
+  }
+
+  return issueAuthResponse(user);
+}
+
+function issueAuthResponse(user) {
+  return {
+    token: createToken({ sub: user.id, email: user.email }),
+    user: publicUser(user)
+  };
+}
+
+function publicUser(user) {
+  return {
+    id: user.id,
+    email: user.email,
+    name: user.name,
+    createdAt: user.createdAt
+  };
+}
+
+function requireUser(req) {
+  const authorization = req.headers.authorization || "";
+  const token = authorization.startsWith("Bearer ") ? authorization.slice(7).trim() : "";
+  const payload = verifyToken(token);
+  if (!payload?.sub) {
+    throw httpError(401, "로그인이 필요합니다.");
+  }
+
+  const user = readUsers().find((item) => item.id === payload.sub);
+  if (!user) {
+    throw httpError(401, "사용자를 찾을 수 없습니다.");
+  }
+  return user;
+}
+
+function validateAuthInput(email, password, name, requireName) {
+  if (!email || !email.includes("@")) {
+    throw httpError(400, "올바른 이메일을 입력해 주세요.");
+  }
+  if (password.length < 8) {
+    throw httpError(400, "비밀번호는 8자 이상이어야 합니다.");
+  }
+  if (requireName && !name) {
+    throw httpError(400, "이름을 입력해 주세요.");
+  }
+}
+
+function hashPassword(password) {
+  const salt = crypto.randomBytes(16).toString("base64url");
+  const hash = crypto.scryptSync(password, salt, 64).toString("base64url");
+  return `scrypt:${salt}:${hash}`;
+}
+
+function verifyPassword(password, storedHash) {
+  const [, salt, expectedHash] = String(storedHash || "").split(":");
+  if (!salt || !expectedHash) {
+    return false;
+  }
+
+  const actualHash = crypto.scryptSync(password, salt, 64);
+  const expectedBuffer = Buffer.from(expectedHash, "base64url");
+  return expectedBuffer.length === actualHash.length
+    && crypto.timingSafeEqual(expectedBuffer, actualHash);
+}
+
+function createToken(payload) {
+  const header = { alg: "HS256", typ: "JWT" };
+  const expiresAt = Math.floor(Date.now() / 1000) + Number(config.AUTH_TOKEN_TTL_SECONDS || 60 * 60 * 24 * 7);
+  const body = { ...payload, exp: expiresAt };
+  const unsigned = `${encodeBase64Url(header)}.${encodeBase64Url(body)}`;
+  const signature = sign(unsigned);
+  return `${unsigned}.${signature}`;
+}
+
+function verifyToken(token) {
+  const parts = String(token || "").split(".");
+  if (parts.length !== 3) {
+    return null;
+  }
+
+  const [header, payload, signature] = parts;
+  const unsigned = `${header}.${payload}`;
+  const expectedSignature = sign(unsigned);
+  if (!safeStringEquals(signature, expectedSignature)) {
+    return null;
+  }
+
+  try {
+    const decoded = JSON.parse(Buffer.from(payload, "base64url").toString("utf8"));
+    if (decoded.exp && decoded.exp < Math.floor(Date.now() / 1000)) {
+      return null;
+    }
+    return decoded;
+  } catch {
+    return null;
+  }
+}
+
+function sign(value) {
+  return crypto
+    .createHmac("sha256", config.AUTH_SECRET || "tripnest-local-dev-secret")
+    .update(value)
+    .digest("base64url");
+}
+
+function safeStringEquals(a, b) {
+  const left = Buffer.from(String(a || ""));
+  const right = Buffer.from(String(b || ""));
+  return left.length === right.length && crypto.timingSafeEqual(left, right);
+}
+
+function encodeBase64Url(value) {
+  return Buffer.from(JSON.stringify(value)).toString("base64url");
+}
+
+function usersFilePath() {
+  return new URL("../data/users.json", import.meta.url);
+}
+
+function readUsers() {
+  const path = usersFilePath();
+  if (!fs.existsSync(path)) {
+    return [];
+  }
+
+  try {
+    const data = JSON.parse(fs.readFileSync(path, "utf8"));
+    return Array.isArray(data.users) ? data.users : [];
+  } catch {
+    return [];
+  }
+}
+
+function writeUsers(users) {
+  const path = usersFilePath();
+  fs.mkdirSync(new URL("../data/", import.meta.url), { recursive: true });
+  fs.writeFileSync(path, `${JSON.stringify({ users }, null, 2)}\n`, "utf8");
+}
+
+function httpError(statusCode, message) {
+  const error = new Error(message);
+  error.statusCode = statusCode;
+  return error;
 }
 
 async function buildRecommendation(body) {

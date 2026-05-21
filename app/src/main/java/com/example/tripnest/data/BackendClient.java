@@ -10,6 +10,7 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.io.BufferedReader;
+import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
@@ -31,6 +32,36 @@ public class BackendClient {
     private static final String ADB_REVERSE_FALLBACK_URL = "http://127.0.0.1:8080";
     private final ExecutorService executor = Executors.newSingleThreadExecutor();
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
+
+    public void register(String name, String email, String password, AuthCallback callback) {
+        requestAuth("/api/auth/register", name, email, password, callback);
+    }
+
+    public void login(String email, String password, AuthCallback callback) {
+        requestAuth("/api/auth/login", null, email, password, callback);
+    }
+
+    private void requestAuth(String path, String name, String email, String password, AuthCallback callback) {
+        executor.execute(() -> {
+            try {
+                JSONObject requestBody = new JSONObject();
+                if (name != null) {
+                    requestBody.put("name", name.trim());
+                }
+                requestBody.put("email", email == null ? "" : email.trim());
+                requestBody.put("password", password == null ? "" : password);
+
+                JSONObject response = postJsonWithFallback(path, requestBody, null);
+                AuthResult result = new AuthResult(
+                        response.optString("token"),
+                        parseUser(response.optJSONObject("user"))
+                );
+                mainHandler.post(() -> callback.onSuccess(result));
+            } catch (Exception error) {
+                mainHandler.post(() -> callback.onError(error));
+            }
+        });
+    }
 
     public void requestRecommendations(String destination, Callback callback) {
         executor.execute(() -> {
@@ -121,6 +152,10 @@ public class BackendClient {
                 }
                 return response;
             } catch (Exception error) {
+                if (error instanceof BackendHttpException
+                        && ((BackendHttpException) error).statusCode < 500) {
+                    throw error;
+                }
                 lastError = error;
                 connectionErrors.put(baseUrl, error.getMessage());
             }
@@ -165,7 +200,23 @@ public class BackendClient {
 
         int statusCode = connection.getResponseCode();
         if (statusCode < 200 || statusCode >= 300) {
-            throw new IllegalStateException("Backend returned " + statusCode + " for " + urlString);
+            String errorBody = "";
+            InputStream errorStream = connection.getErrorStream();
+            if (errorStream != null) {
+                try (BufferedReader reader = new BufferedReader(new InputStreamReader(errorStream, StandardCharsets.UTF_8))) {
+                    StringBuilder errorBuilder = new StringBuilder();
+                    String line;
+                    while ((line = reader.readLine()) != null) {
+                        errorBuilder.append(line);
+                    }
+                    errorBody = errorBuilder.toString();
+                }
+            }
+            String message = parseErrorMessage(errorBody);
+            throw new BackendHttpException(
+                    statusCode,
+                    message.isEmpty() ? "Backend returned " + statusCode + " for " + urlString : message
+            );
         }
 
         StringBuilder responseBuilder = new StringBuilder();
@@ -178,6 +229,30 @@ public class BackendClient {
             connection.disconnect();
         }
         return new JSONObject(responseBuilder.toString());
+    }
+
+    private String parseErrorMessage(String errorBody) {
+        try {
+            JSONObject errorJson = new JSONObject(errorBody == null ? "" : errorBody);
+            String message = errorJson.optString("message");
+            if (!message.isEmpty()) {
+                return message;
+            }
+            return errorJson.optString("error");
+        } catch (Exception ignored) {
+            return "";
+        }
+    }
+
+    private AuthUser parseUser(JSONObject userJson) {
+        if (userJson == null) {
+            return new AuthUser("", "", "");
+        }
+        return new AuthUser(
+                userJson.optString("id"),
+                userJson.optString("email"),
+                userJson.optString("name")
+        );
     }
 
     private List<String> parseNearbyNames(JSONArray array) {
@@ -206,6 +281,33 @@ public class BackendClient {
     public interface NearbyCallback {
         void onSuccess(NearbyResult result);
         void onError(Exception error);
+    }
+
+    public interface AuthCallback {
+        void onSuccess(AuthResult result);
+        void onError(Exception error);
+    }
+
+    public static class AuthResult {
+        public final String token;
+        public final AuthUser user;
+
+        public AuthResult(String token, AuthUser user) {
+            this.token = token;
+            this.user = user;
+        }
+    }
+
+    public static class AuthUser {
+        public final String id;
+        public final String email;
+        public final String name;
+
+        public AuthUser(String id, String email, String name) {
+            this.id = id;
+            this.email = email;
+            this.name = name;
+        }
     }
 
     public static class TripRecommendation {
@@ -246,5 +348,14 @@ public class BackendClient {
 
     private interface ResponseValidator {
         boolean isValid(JSONObject response);
+    }
+
+    private static class BackendHttpException extends Exception {
+        final int statusCode;
+
+        BackendHttpException(int statusCode, String message) {
+            super(message);
+            this.statusCode = statusCode;
+        }
     }
 }
