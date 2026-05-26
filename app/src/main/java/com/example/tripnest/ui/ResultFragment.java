@@ -454,10 +454,15 @@ public class ResultFragment extends Fragment {
         int transportationTotal = estimateTransportationCost(orderedPlaces);
 
         lines.add("\uBE44\uC6A9 \uC0C1\uC138");
+        lines.add("[\uC2DD\uBE44]");
         appendMealBreakdown(lines, orderedPlaces);
+        lines.add("[\uC785\uC7A5\uAD8C]");
         appendAdmissionBreakdown(lines, orderedPlaces);
+        lines.add("[\uC219\uBC15\uBE44]");
         appendLodgingBreakdown(lines, orderedPlaces);
+        lines.add("[\uAD50\uD1B5\uBE44]");
         appendTransportationBreakdown(lines, orderedPlaces);
+        lines.add("[\uD569\uACC4]");
         lines.add("\uCD1D \uC2DD\uBE44: " + formatWon(mealTotal) + "\uC6D0");
         lines.add("\uCD1D \uC785\uC7A5\uAD8C: " + formatWon(admissionTotal) + "\uC6D0");
         lines.add("\uCD1D \uC219\uBC15\uBE44: " + formatWon(lodgingTotal) + "\uC6D0");
