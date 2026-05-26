@@ -1,9 +1,9 @@
 package com.example.tripnest.data;
 
 import android.content.Context;
+import android.os.Build;
 import android.os.Handler;
 import android.os.Looper;
-import android.os.Build;
 
 import com.example.tripnest.BuildConfig;
 import com.example.tripnest.model.AuthResult;
@@ -38,17 +38,18 @@ public class BackendClient {
     private static final String BACKEND_FALLBACK_URL = BuildConfig.BACKEND_FALLBACK_URL;
     private static final String EMULATOR_FALLBACK_URL = "http://10.0.2.2:8080";
     private static final String ADB_REVERSE_FALLBACK_URL = "http://127.0.0.1:8080";
+
     private final ExecutorService executor = Executors.newSingleThreadExecutor();
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
     private final ServerConfig serverConfig;
 
     public BackendClient() {
-        // 테스트나 단순 호출에서는 빌드 기본 URL만 사용한다.
+        // 테스트나 단순 호출에서는 BuildConfig의 서버 주소만 사용한다.
         this.serverConfig = null;
     }
 
     public BackendClient(Context context) {
-        // 실제 앱 화면에서는 사용자가 저장한 서버 주소를 우선 사용할 수 있게 한다.
+        // 앱 화면에서도 서버 주소는 런타임 입력값이 아니라 빌드 설정을 따른다.
         this.serverConfig = new ServerConfig(context);
     }
 
@@ -58,7 +59,6 @@ public class BackendClient {
     }
 
     public void checkHealth(HealthCallback callback) {
-        // 서버 설정 화면에서 빠르게 연결 상태를 확인할 때 쓰는 가벼운 요청이다.
         executor.execute(() -> {
             try {
                 JSONObject response = getJson(getActiveBaseUrl() + "/api/health");
@@ -78,7 +78,7 @@ public class BackendClient {
     }
 
     private void requestAuth(String path, String name, String email, String password, AuthCallback callback) {
-        // 인증 요청은 로그인/회원가입이 거의 같아서 path와 name 유무만 다르게 받는다.
+        // 로그인과 회원가입은 payload만 조금 다르고 응답 처리 흐름은 같다.
         executor.execute(() -> {
             try {
                 JSONObject requestBody = new JSONObject();
@@ -105,7 +105,7 @@ public class BackendClient {
                                        String endDate,
                                        int budgetWon,
                                        Callback callback) {
-        // 추천 API는 사용자가 입력한 조건을 한 번에 넘기고, 응답은 화면 모델로 바꿔 돌려준다.
+        // 홈에서 받은 조건을 추천 API payload로 만들고, 응답은 화면 모델로 바꿔 돌려준다.
         executor.execute(() -> {
             try {
                 JSONObject requestBody = new JSONObject();
@@ -124,26 +124,8 @@ public class BackendClient {
                             return places != null && places.length() > 0;
                         }
                 );
-                JSONArray placesJson = response.optJSONArray("places");
-                List<Place> places = new ArrayList<>();
-                if (placesJson != null) {
-                    for (int i = 0; i < placesJson.length(); i++) {
-                        JSONObject placeJson = placesJson.optJSONObject(i);
-                        if (placeJson == null) {
-                            continue;
-                        }
-                        places.add(new Place(
-                                placeJson.optString("name"),
-                                placeJson.optString("description"),
-                                placeJson.optString("category"),
-                                placeJson.optString("address"),
-                                placeJson.optString("kakaoPlaceUrl"),
-                                parseDouble(placeJson.optString("latitude")),
-                                parseDouble(placeJson.optString("longitude"))
-                        ));
-                    }
-                }
 
+                List<Place> places = parsePlaces(response.optJSONArray("places"));
                 TripRecommendation recommendation = new TripRecommendation(
                         response.optString("summary"),
                         response.optString("relatedSummary"),
@@ -159,7 +141,6 @@ public class BackendClient {
     }
 
     public void requestPlaceInsight(String destination, Place place, PlaceInsightCallback callback) {
-        // 장소 상세 바텀시트에서 선택한 장소의 관련 글 요약을 따로 가져온다.
         executor.execute(() -> {
             try {
                 JSONObject requestBody = new JSONObject();
@@ -182,7 +163,6 @@ public class BackendClient {
     }
 
     public void requestNearby(double latitude, double longitude, int radiusMeters, NearbyCallback callback) {
-        // 지도에서 고른 중심 좌표를 기준으로 주변 숙소/관광/음식 데이터를 요청한다.
         executor.execute(() -> {
             try {
                 JSONObject requestBody = new JSONObject();
@@ -204,9 +184,12 @@ public class BackendClient {
     }
 
     private JSONObject postJsonWithFallback(String path, JSONObject body, ResponseValidator validator) throws Exception {
-        // 개발 환경마다 접근 가능한 주소가 달라서, 가능성 높은 URL을 순서대로 시도한다.
+        // 빌드 설정 주소를 먼저 쓰고, 개발 환경별 후보 주소를 순서대로 시도한다.
         LinkedHashSet<String> baseUrls = new LinkedHashSet<>();
         baseUrls.add(getActiveBaseUrl());
+        if (serverConfig != null) {
+            baseUrls.add(serverConfig.getFallbackUrl());
+        }
         baseUrls.add(BACKEND_FALLBACK_URL);
         baseUrls.add(BASE_URL);
         baseUrls.add(ADB_REVERSE_FALLBACK_URL);
@@ -224,13 +207,11 @@ public class BackendClient {
             try {
                 JSONObject response = postJson(baseUrl.trim() + path, body);
                 if (validator != null && !validator.isValid(response)) {
-                    // 연결은 됐지만 필요한 데이터가 비어 있으면 다음 후보 서버를 시도한다.
                     validationErrors.put(baseUrl, "response does not include expected data");
                     continue;
                 }
                 return response;
             } catch (Exception error) {
-                // 4xx는 사용자 입력이나 인증 문제일 가능성이 커서 다른 서버로 숨기지 않는다.
                 if (error instanceof BackendHttpException
                         && ((BackendHttpException) error).statusCode < 500) {
                     throw error;
@@ -239,6 +220,7 @@ public class BackendClient {
                 connectionErrors.put(baseUrl, error.getMessage());
             }
         }
+
         if (!validationErrors.isEmpty()) {
             throw new IllegalStateException("All backends returned empty recommendation data: " + validationErrors.keySet());
         }
@@ -251,7 +233,6 @@ public class BackendClient {
         throw new IllegalStateException("No backend URL candidates available.");
     }
 
-    // Real phones use adb reverse with 127.0.0.1, while emulators need 10.0.2.2.
     private boolean isProbablyEmulator() {
         return Build.FINGERPRINT.startsWith("generic")
                 || Build.FINGERPRINT.startsWith("unknown")
@@ -264,7 +245,6 @@ public class BackendClient {
                 || "google_sdk".equals(Build.PRODUCT);
     }
 
-    // Centralizes JSON POST handling so each API method only describes its payload/response.
     private JSONObject postJson(String urlString, JSONObject body) throws Exception {
         URL url = new URL(urlString);
         HttpURLConnection connection = (HttpURLConnection) url.openConnection();
@@ -281,18 +261,7 @@ public class BackendClient {
 
         int statusCode = connection.getResponseCode();
         if (statusCode < 200 || statusCode >= 300) {
-            String errorBody = "";
-            InputStream errorStream = connection.getErrorStream();
-            if (errorStream != null) {
-                try (BufferedReader reader = new BufferedReader(new InputStreamReader(errorStream, StandardCharsets.UTF_8))) {
-                    StringBuilder errorBuilder = new StringBuilder();
-                    String line;
-                    while ((line = reader.readLine()) != null) {
-                        errorBuilder.append(line);
-                    }
-                    errorBody = errorBuilder.toString();
-                }
-            }
+            String errorBody = readErrorBody(connection);
             String message = parseErrorMessage(errorBody);
             throw new BackendHttpException(
                     statusCode,
@@ -313,7 +282,6 @@ public class BackendClient {
     }
 
     private JSONObject getJson(String urlString) throws Exception {
-        // health check처럼 본문이 필요 없는 요청은 GET 전용 헬퍼로 처리한다.
         URL url = new URL(urlString);
         HttpURLConnection connection = (HttpURLConnection) url.openConnection();
         connection.setRequestMethod("GET");
@@ -337,8 +305,22 @@ public class BackendClient {
         return new JSONObject(responseBuilder.toString());
     }
 
+    private String readErrorBody(HttpURLConnection connection) throws Exception {
+        InputStream errorStream = connection.getErrorStream();
+        if (errorStream == null) {
+            return "";
+        }
+        try (BufferedReader reader = new BufferedReader(new InputStreamReader(errorStream, StandardCharsets.UTF_8))) {
+            StringBuilder errorBuilder = new StringBuilder();
+            String line;
+            while ((line = reader.readLine()) != null) {
+                errorBuilder.append(line);
+            }
+            return errorBuilder.toString();
+        }
+    }
+
     private String parseErrorMessage(String errorBody) {
-        // 백엔드가 내려준 message/error 필드를 사용자에게 보여줄 수 있는 문구로 꺼낸다.
         try {
             JSONObject errorJson = new JSONObject(errorBody == null ? "" : errorBody);
             String message = errorJson.optString("message");
@@ -352,7 +334,6 @@ public class BackendClient {
     }
 
     private AuthUser parseUser(JSONObject userJson) {
-        // user가 빠진 응답도 앱이 터지지 않도록 빈 사용자 객체로 맞춘다.
         if (userJson == null) {
             return new AuthUser("", "", "");
         }
@@ -363,8 +344,30 @@ public class BackendClient {
         );
     }
 
+    private List<Place> parsePlaces(JSONArray placesJson) {
+        List<Place> places = new ArrayList<>();
+        if (placesJson == null) {
+            return places;
+        }
+        for (int i = 0; i < placesJson.length(); i++) {
+            JSONObject placeJson = placesJson.optJSONObject(i);
+            if (placeJson == null) {
+                continue;
+            }
+            places.add(new Place(
+                    placeJson.optString("name"),
+                    placeJson.optString("description"),
+                    placeJson.optString("category"),
+                    placeJson.optString("address"),
+                    placeJson.optString("kakaoPlaceUrl"),
+                    parseDouble(placeJson.optString("latitude")),
+                    parseDouble(placeJson.optString("longitude"))
+            ));
+        }
+        return places;
+    }
+
     private List<String> parseNearbyNames(JSONArray array) {
-        // 주변 장소 응답에서는 화면에 보여줄 이름만 추려낸다.
         List<String> names = new ArrayList<>();
         if (array == null) {
             return names;
@@ -383,7 +386,6 @@ public class BackendClient {
     }
 
     private double parseDouble(String value) {
-        // 좌표가 비어 있거나 깨졌을 때는 NaN으로 표시해 지도 버튼 노출을 막는다.
         try {
             return Double.parseDouble(value == null ? "" : value);
         } catch (NumberFormatException ignored) {
@@ -391,7 +393,6 @@ public class BackendClient {
         }
     }
 
-    // Sources are rendered as clickable cards in the result/detail UI.
     private List<Source> parseSources(JSONArray array) {
         List<Source> sources = new ArrayList<>();
         if (array == null) {

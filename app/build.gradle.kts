@@ -11,6 +11,14 @@ val localProperties = Properties().apply {
     }
 }
 
+fun configuredValue(name: String): String? =
+    (project.findProperty(name) as String?)
+        ?: System.getenv(name)
+        ?: localProperties.getProperty(name)
+
+fun String.asBuildConfigString(): String =
+    replace("\\", "\\\\").replace("\"", "\\\"")
+
 android {
     namespace = "com.example.tripnest"
     compileSdk = 36
@@ -24,18 +32,15 @@ android {
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
-        val backendBaseUrl = (project.findProperty("BACKEND_BASE_URL") as String?)
-            ?: localProperties.getProperty("BACKEND_BASE_URL")
+        val backendBaseUrl = configuredValue("BACKEND_BASE_URL")
             ?: "http://172.30.1.109:8080"
-        val backendFallbackUrl = (project.findProperty("BACKEND_FALLBACK_URL") as String?)
-            ?: localProperties.getProperty("BACKEND_FALLBACK_URL")
+        val backendFallbackUrl = configuredValue("BACKEND_FALLBACK_URL")
             ?: backendBaseUrl
-        val kakaoNativeAppKey = (project.findProperty("KAKAO_NATIVE_APP_KEY") as String?)
-            ?: localProperties.getProperty("KAKAO_NATIVE_APP_KEY")
+        val kakaoNativeAppKey = configuredValue("KAKAO_NATIVE_APP_KEY")
             ?: ""
 
-        buildConfigField("String", "BACKEND_BASE_URL", "\"$backendBaseUrl\"")
-        buildConfigField("String", "BACKEND_FALLBACK_URL", "\"$backendFallbackUrl\"")
+        buildConfigField("String", "BACKEND_BASE_URL", "\"${backendBaseUrl.asBuildConfigString()}\"")
+        buildConfigField("String", "BACKEND_FALLBACK_URL", "\"${backendFallbackUrl.asBuildConfigString()}\"")
         manifestPlaceholders["KAKAO_NATIVE_APP_KEY"] = kakaoNativeAppKey
     }
 
