@@ -2,8 +2,8 @@ services:
   - type: web
     name: tripnest-backend
     runtime: docker
-    dockerContext: .
-    dockerfilePath: ./Dockerfile
+    dockerContext: ./backend
+    dockerfilePath: ./backend/Dockerfile
     healthCheckPath: /api/health
     envVars:
       - key: PORT

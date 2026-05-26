@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "node src/server.js",
+    "dev:online": "set ENABLE_CLOUDFLARE_TUNNEL=true&& set PORT=8082&& node src/server.js",
     "start": "node src/server.js"
   },
   "engines": {

@@ -1,15 +1,24 @@
 package com.example.tripnest.data;
 
+import android.content.Context;
+import android.os.Build;
 import android.os.Handler;
 import android.os.Looper;
-import android.os.Build;
 
 import com.example.tripnest.BuildConfig;
+import com.example.tripnest.model.AuthResult;
+import com.example.tripnest.model.AuthUser;
+import com.example.tripnest.model.NearbyResult;
+import com.example.tripnest.model.Place;
+import com.example.tripnest.model.PlaceInsight;
+import com.example.tripnest.model.Source;
+import com.example.tripnest.model.TripRecommendation;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.io.BufferedReader;
+import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
@@ -29,16 +38,93 @@ public class BackendClient {
     private static final String BACKEND_FALLBACK_URL = BuildConfig.BACKEND_FALLBACK_URL;
     private static final String EMULATOR_FALLBACK_URL = "http://10.0.2.2:8080";
     private static final String ADB_REVERSE_FALLBACK_URL = "http://127.0.0.1:8080";
+
     private final ExecutorService executor = Executors.newSingleThreadExecutor();
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
+    private final ServerConfig serverConfig;
+//
+//    public BackendClient() {
+//        // 테스트나 단순 호출에서는 BuildConfig의 서버 주소만 사용한다.
+//        this.serverConfig = null;
+//    }
 
-    public void requestRecommendations(String destination, Callback callback) {
+    public BackendClient(Context context) {
+        // 앱 화면에서도 서버 주소는 런타임 입력값이 아니라 빌드 설정을 따른다.
+        this.serverConfig = new ServerConfig(context);
+    }
+
+    public String getActiveBaseUrl() {
+        // ServerConfig가 없으면 BuildConfig의 기본 서버로 폴백한다.
+        return serverConfig == null ? BASE_URL : serverConfig.getBaseUrl();
+    }
+
+    public void checkHealth(HealthCallback callback) {
+        executor.execute(() -> {
+            try {
+                JSONObject response = getJson(getActiveBaseUrl() + "/api/health");
+                mainHandler.post(() -> callback.onSuccess(response.optString("service", "TripNest Backend")));
+            } catch (Exception error) {
+                mainHandler.post(() -> callback.onError(error));
+            }
+        });
+    }
+
+    public void register(String name, String email, String password, AuthCallback callback) {
+        requestAuth("/api/auth/register", name, email, password, callback);
+    }
+
+    public void login(String email, String password, AuthCallback callback) {
+        requestAuth("/api/auth/login", null, email, password, callback);
+    }
+
+    private void requestAuth(String path, String name, String email, String password, AuthCallback callback) {
+        // 로그인과 회원가입은 payload만 조금 다르고 응답 처리 흐름은 같다.
+        executor.execute(() -> {
+            try {
+                JSONObject requestBody = new JSONObject();
+                if (name != null) {
+                    requestBody.put("name", name.trim());
+                }
+                requestBody.put("email", email == null ? "" : email.trim());
+                requestBody.put("password", password == null ? "" : password);
+
+                JSONObject response = postJsonWithFallback(path, requestBody, null);
+                AuthResult result = new AuthResult(
+                        response.optString("token"),
+                        parseUser(response.optJSONObject("user"))
+                );
+                mainHandler.post(() -> callback.onSuccess(result));
+            } catch (Exception error) {
+                mainHandler.post(() -> callback.onError(error));
+            }
+        });
+    }
+
+    public void requestRecommendations(String destination,
+                                       String startDate,
+                                       String endDate,
+                                       int budgetWon,
+                                       String routePlan,
+                                       int adultCount,
+                                       int youthCount,
+                                       int seniorCount,
+                                       int childCount,
+                                       Callback callback) {
+        // 홈에서 받은 조건을 추천 API payload로 만들고, 응답은 화면 모델로 바꿔 돌려준다.
         executor.execute(() -> {
             try {
                 JSONObject requestBody = new JSONObject();
                 requestBody.put("destination", destination == null || destination.trim().isEmpty() ? "Travel" : destination.trim());
+                requestBody.put("startDate", startDate == null ? "" : startDate.trim());
+                requestBody.put("endDate", endDate == null ? "" : endDate.trim());
+                requestBody.put("budgetWon", Math.max(0, budgetWon));
                 requestBody.put("durationDays", 3);
-                requestBody.put("styles", new JSONArray().put("nature").put("food").put("route"));
+                requestBody.put("routePlan", routePlan == null ? "" : routePlan.trim());
+                requestBody.put("adultCount", Math.max(0, adultCount));
+                requestBody.put("youthCount", Math.max(0, youthCount));
+                requestBody.put("seniorCount", Math.max(0, seniorCount));
+                requestBody.put("childCount", Math.max(0, childCount));
+                requestBody.put("styles", new JSONArray().put("자연").put("맛집").put("동선"));
 
                 JSONObject response = postJsonWithFallback(
                         "/api/trips/recommendations",
@@ -48,28 +134,78 @@ public class BackendClient {
                             return places != null && places.length() > 0;
                         }
                 );
-                JSONArray placesJson = response.optJSONArray("places");
-                List<Place> places = new ArrayList<>();
-                if (placesJson != null) {
-                    for (int i = 0; i < placesJson.length(); i++) {
-                        JSONObject placeJson = placesJson.optJSONObject(i);
-                        if (placeJson == null) {
-                            continue;
-                        }
-                        places.add(new Place(
-                                placeJson.optString("name"),
-                                placeJson.optString("description"),
-                                placeJson.optString("category")
-                        ));
-                    }
-                }
 
+                List<Place> places = parsePlaces(response.optJSONArray("places"));
                 TripRecommendation recommendation = new TripRecommendation(
                         response.optString("summary"),
+                        response.optString("relatedSummary"),
                         response.optInt("filteredAdCount"),
-                        places
+                        response.optInt("lodgingNightlyCostWon"),
+                        places,
+                        parseSources(response.optJSONArray("sources"))
                 );
                 mainHandler.post(() -> callback.onSuccess(recommendation));
+            } catch (Exception error) {
+                mainHandler.post(() -> callback.onError(error));
+            }
+        });
+    }
+
+    public void requestPlaceInsight(String destination, Place place, PlaceInsightCallback callback) {
+        executor.execute(() -> {
+            try {
+                JSONObject requestBody = new JSONObject();
+                requestBody.put("destination", destination == null ? "" : destination.trim());
+                requestBody.put("placeName", place == null ? "" : place.name);
+                requestBody.put("category", place == null ? "" : place.category);
+
+                JSONObject response = postJsonWithFallback("/api/places/insights", requestBody, null);
+                PlaceInsight result = new PlaceInsight(
+                        response.optString("placeName"),
+                        response.optString("summary"),
+                        response.optInt("filteredAdCount"),
+                        parseSources(response.optJSONArray("sources"))
+                );
+                mainHandler.post(() -> callback.onSuccess(result));
+            } catch (Exception error) {
+                mainHandler.post(() -> callback.onError(error));
+            }
+        });
+    }
+
+    public void requestPlaceCostEstimate(String destination,
+                                         Place place,
+                                         String startDate,
+                                         String endDate,
+                                         int budgetWon,
+                                         int adultCount,
+                                         int youthCount,
+                                         int seniorCount,
+                                         int childCount,
+                                         PlaceCostEstimateCallback callback) {
+        executor.execute(() -> {
+            try {
+                JSONObject requestBody = new JSONObject();
+                requestBody.put("destination", destination == null ? "" : destination.trim());
+                requestBody.put("placeName", place == null ? "" : place.name);
+                requestBody.put("category", place == null ? "" : place.category);
+                requestBody.put("startDate", startDate == null ? "" : startDate.trim());
+                requestBody.put("endDate", endDate == null ? "" : endDate.trim());
+                requestBody.put("budgetWon", Math.max(0, budgetWon));
+                requestBody.put("adultCount", Math.max(0, adultCount));
+                requestBody.put("youthCount", Math.max(0, youthCount));
+                requestBody.put("seniorCount", Math.max(0, seniorCount));
+                requestBody.put("childCount", Math.max(0, childCount));
+
+                JSONObject response = postJsonWithFallback("/api/places/insights", requestBody, null);
+                mainHandler.post(() -> callback.onSuccess(
+                        response.optInt("lodgingNightlyCostWon"),
+                        response.optInt("mealCostWon"),
+                        response.optInt("admissionAdultWon"),
+                        response.optInt("admissionYouthWon"),
+                        response.optInt("admissionSeniorWon"),
+                        response.optInt("admissionChildWon")
+                ));
             } catch (Exception error) {
                 mainHandler.post(() -> callback.onError(error));
             }
@@ -98,7 +234,12 @@ public class BackendClient {
     }
 
     private JSONObject postJsonWithFallback(String path, JSONObject body, ResponseValidator validator) throws Exception {
+        // 빌드 설정 주소를 먼저 쓰고, 개발 환경별 후보 주소를 순서대로 시도한다.
         LinkedHashSet<String> baseUrls = new LinkedHashSet<>();
+        baseUrls.add(getActiveBaseUrl());
+        if (serverConfig != null) {
+            baseUrls.add(serverConfig.getFallbackUrl());
+        }
         baseUrls.add(BACKEND_FALLBACK_URL);
         baseUrls.add(BASE_URL);
         baseUrls.add(ADB_REVERSE_FALLBACK_URL);
@@ -121,10 +262,15 @@ public class BackendClient {
                 }
                 return response;
             } catch (Exception error) {
+                if (error instanceof BackendHttpException
+                        && ((BackendHttpException) error).statusCode < 500) {
+                    throw error;
+                }
                 lastError = error;
                 connectionErrors.put(baseUrl, error.getMessage());
             }
         }
+
         if (!validationErrors.isEmpty()) {
             throw new IllegalStateException("All backends returned empty recommendation data: " + validationErrors.keySet());
         }
@@ -165,7 +311,12 @@ public class BackendClient {
 
         int statusCode = connection.getResponseCode();
         if (statusCode < 200 || statusCode >= 300) {
-            throw new IllegalStateException("Backend returned " + statusCode + " for " + urlString);
+            String errorBody = readErrorBody(connection);
+            String message = parseErrorMessage(errorBody);
+            throw new BackendHttpException(
+                    statusCode,
+                    message.isEmpty() ? "Backend returned " + statusCode + " for " + urlString : message
+            );
         }
 
         StringBuilder responseBuilder = new StringBuilder();
@@ -178,6 +329,92 @@ public class BackendClient {
             connection.disconnect();
         }
         return new JSONObject(responseBuilder.toString());
+    }
+
+    private JSONObject getJson(String urlString) throws Exception {
+        URL url = new URL(urlString);
+        HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+        connection.setRequestMethod("GET");
+        connection.setConnectTimeout(5000);
+        connection.setReadTimeout(10000);
+
+        int statusCode = connection.getResponseCode();
+        if (statusCode < 200 || statusCode >= 300) {
+            throw new BackendHttpException(statusCode, "Backend returned " + statusCode + " for " + urlString);
+        }
+
+        StringBuilder responseBuilder = new StringBuilder();
+        try (BufferedReader reader = new BufferedReader(new InputStreamReader(connection.getInputStream(), StandardCharsets.UTF_8))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                responseBuilder.append(line);
+            }
+        } finally {
+            connection.disconnect();
+        }
+        return new JSONObject(responseBuilder.toString());
+    }
+
+    private String readErrorBody(HttpURLConnection connection) throws Exception {
+        InputStream errorStream = connection.getErrorStream();
+        if (errorStream == null) {
+            return "";
+        }
+        try (BufferedReader reader = new BufferedReader(new InputStreamReader(errorStream, StandardCharsets.UTF_8))) {
+            StringBuilder errorBuilder = new StringBuilder();
+            String line;
+            while ((line = reader.readLine()) != null) {
+                errorBuilder.append(line);
+            }
+            return errorBuilder.toString();
+        }
+    }
+
+    private String parseErrorMessage(String errorBody) {
+        try {
+            JSONObject errorJson = new JSONObject(errorBody == null ? "" : errorBody);
+            String message = errorJson.optString("message");
+            if (!message.isEmpty()) {
+                return message;
+            }
+            return errorJson.optString("error");
+        } catch (Exception ignored) {
+            return "";
+        }
+    }
+
+    private AuthUser parseUser(JSONObject userJson) {
+        if (userJson == null) {
+            return new AuthUser("", "", "");
+        }
+        return new AuthUser(
+                userJson.optString("id"),
+                userJson.optString("email"),
+                userJson.optString("name")
+        );
+    }
+
+    private List<Place> parsePlaces(JSONArray placesJson) {
+        List<Place> places = new ArrayList<>();
+        if (placesJson == null) {
+            return places;
+        }
+        for (int i = 0; i < placesJson.length(); i++) {
+            JSONObject placeJson = placesJson.optJSONObject(i);
+            if (placeJson == null) {
+                continue;
+            }
+            places.add(new Place(
+                    placeJson.optString("name"),
+                    placeJson.optString("description"),
+                    placeJson.optString("category"),
+                    placeJson.optString("address"),
+                    placeJson.optString("kakaoPlaceUrl"),
+                    parseDouble(placeJson.optString("latitude")),
+                    parseDouble(placeJson.optString("longitude"))
+            ));
+        }
+        return places;
     }
 
     private List<String> parseNearbyNames(JSONArray array) {
@@ -198,6 +435,35 @@ public class BackendClient {
         return names;
     }
 
+    private double parseDouble(String value) {
+        try {
+            return Double.parseDouble(value == null ? "" : value);
+        } catch (NumberFormatException ignored) {
+            return Double.NaN;
+        }
+    }
+
+    private List<Source> parseSources(JSONArray array) {
+        List<Source> sources = new ArrayList<>();
+        if (array == null) {
+            return sources;
+        }
+        for (int i = 0; i < array.length(); i++) {
+            JSONObject item = array.optJSONObject(i);
+            if (item == null) {
+                continue;
+            }
+            String title = item.optString("title");
+            String source = item.optString("source");
+            String url = item.optString("url");
+            String summary = item.optString("summary");
+            if (!title.trim().isEmpty()) {
+                sources.add(new Source(title, source, url, summary));
+            }
+        }
+        return sources;
+    }
+
     public interface Callback {
         void onSuccess(TripRecommendation recommendation);
         void onError(Exception error);
@@ -208,43 +474,41 @@ public class BackendClient {
         void onError(Exception error);
     }
 
-    public static class TripRecommendation {
-        public final String summary;
-        public final int filteredAdCount;
-        public final List<Place> places;
-
-        public TripRecommendation(String summary, int filteredAdCount, List<Place> places) {
-            this.summary = summary;
-            this.filteredAdCount = filteredAdCount;
-            this.places = places;
-        }
+    public interface PlaceInsightCallback {
+        void onSuccess(PlaceInsight result);
+        void onError(Exception error);
     }
 
-    public static class Place {
-        public final String name;
-        public final String description;
-        public final String category;
-
-        public Place(String name, String description, String category) {
-            this.name = name;
-            this.description = description;
-            this.category = category;
-        }
+    public interface PlaceCostEstimateCallback {
+        void onSuccess(int nightlyCostWon,
+                       int mealCostWon,
+                       int admissionAdultWon,
+                       int admissionYouthWon,
+                       int admissionSeniorWon,
+                       int admissionChildWon);
+        void onError(Exception error);
     }
 
-    public static class NearbyResult {
-        public final List<String> stays;
-        public final List<String> attractions;
-        public final List<String> restaurants;
+    public interface AuthCallback {
+        void onSuccess(AuthResult result);
+        void onError(Exception error);
+    }
 
-        public NearbyResult(List<String> stays, List<String> attractions, List<String> restaurants) {
-            this.stays = stays;
-            this.attractions = attractions;
-            this.restaurants = restaurants;
-        }
+    public interface HealthCallback {
+        void onSuccess(String serviceName);
+        void onError(Exception error);
     }
 
     private interface ResponseValidator {
         boolean isValid(JSONObject response);
+    }
+
+    private static class BackendHttpException extends Exception {
+        final int statusCode;
+
+        BackendHttpException(int statusCode, String message) {
+            super(message);
+            this.statusCode = statusCode;
+        }
     }
 }

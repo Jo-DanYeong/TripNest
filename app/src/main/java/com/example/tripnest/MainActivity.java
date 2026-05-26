@@ -1,12 +1,11 @@
 package com.example.tripnest;
 
 import android.os.Bundle;
+import android.view.View;
+import android.widget.ImageView;
+import android.widget.TextView;
 
-import androidx.activity.EdgeToEdge;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.core.graphics.Insets;
-import androidx.core.view.ViewCompat;
-import androidx.core.view.WindowInsetsCompat;
 import androidx.navigation.NavController;
 import androidx.navigation.fragment.NavHostFragment;
 import androidx.navigation.ui.AppBarConfiguration;
@@ -22,7 +21,6 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        EdgeToEdge.enable(this);
 
         ActivityMainBinding binding = ActivityMainBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
@@ -36,42 +34,59 @@ public class MainActivity extends AppCompatActivity {
                 R.id.myTripFragment
         ).build();
 
-        binding.bottomNav.setOnItemSelectedListener(item -> {
-            int itemId = item.getItemId();
-            if (itemId == R.id.nav_home) {
-                if (navController.getCurrentDestination() == null
-                        || navController.getCurrentDestination().getId() != R.id.homeFragment) {
-                    navController.popBackStack(R.id.homeFragment, false);
-                }
-                return true;
-            }
+        navController.addOnDestinationChangedListener((controller, destination, arguments) -> {
+            boolean isLogin = destination.getId() == R.id.loginFragment;
+            binding.bottomNav.setVisibility(isLogin ? View.GONE : View.VISIBLE);
 
-            if (itemId == R.id.nav_map) {
-                if (navController.getCurrentDestination() != null
-                        && navController.getCurrentDestination().getId() != R.id.mapPickFragment) {
-                    Bundle args = new Bundle();
-                    args.putBoolean("pickMode", false);
-                    navController.navigate(R.id.mapPickFragment, args);
-                }
-                return true;
+            if (destination.getId() == R.id.homeFragment || destination.getId() == R.id.resultFragment) {
+                selectBottomTab(binding, R.id.nav_home);
+            } else if (destination.getId() == R.id.mapPickFragment) {
+                selectBottomTab(binding, R.id.nav_map);
+            } else if (destination.getId() == R.id.myTripFragment) {
+                selectBottomTab(binding, R.id.nav_my);
             }
-
-            if (itemId == R.id.nav_my) {
-                if (navController.getCurrentDestination() != null
-                        && navController.getCurrentDestination().getId() != R.id.myTripFragment) {
-                    navController.navigate(R.id.myTripFragment);
-                }
-                return true;
-            }
-
-            return false;
         });
 
-        ViewCompat.setOnApplyWindowInsetsListener(binding.main, (v, insets) -> {
-            Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
-            v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom);
-            return insets;
+        binding.navHome.setOnClickListener(v -> {
+            if (navController.getCurrentDestination() == null
+                    || navController.getCurrentDestination().getId() == R.id.homeFragment
+                    || navController.getCurrentDestination().getId() == R.id.resultFragment) {
+                return;
+            }
+
+            if (!navController.popBackStack(R.id.resultFragment, false)) {
+                navController.popBackStack(R.id.homeFragment, false);
+            }
         });
+
+        binding.navMap.setOnClickListener(v -> {
+            if (navController.getCurrentDestination() != null
+                    && navController.getCurrentDestination().getId() != R.id.mapPickFragment) {
+                Bundle args = new Bundle();
+                args.putBoolean("pickMode", false);
+                navController.navigate(R.id.mapPickFragment, args);
+            }
+        });
+
+        binding.navMy.setOnClickListener(v -> {
+            if (navController.getCurrentDestination() != null
+                    && navController.getCurrentDestination().getId() != R.id.myTripFragment) {
+                navController.navigate(R.id.myTripFragment);
+            }
+        });
+    }
+
+    private void selectBottomTab(ActivityMainBinding binding, int selectedId) {
+        styleTab(binding.navHome, binding.navHomeIcon, binding.navHomeLabel, selectedId == R.id.nav_home);
+        styleTab(binding.navMap, binding.navMapIcon, binding.navMapLabel, selectedId == R.id.nav_map);
+        styleTab(binding.navMy, binding.navMyIcon, binding.navMyLabel, selectedId == R.id.nav_my);
+    }
+
+    private void styleTab(View tab, ImageView icon, TextView label, boolean selected) {
+        tab.setBackgroundResource(selected ? R.drawable.bg_nav_selected : R.drawable.bg_nav_unselected);
+        int color = getColor(selected ? R.color.primary : R.color.text_secondary);
+        icon.setColorFilter(color);
+        label.setTextColor(color);
     }
 
     @Override

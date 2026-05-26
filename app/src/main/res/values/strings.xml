@@ -1,56 +1,155 @@
+<?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">TripNest</string>
-    <string name="action_settings">Settings</string>
-    <string name="first_fragment_label">Home</string>
-    <string name="second_fragment_label">Result</string>
-    <string name="next">Next</string>
-    <string name="previous">Previous</string>
+    <string name="action_settings">설정</string>
+    <string name="first_fragment_label">홈</string>
+    <string name="second_fragment_label">결과</string>
+    <string name="next">다음</string>
+    <string name="previous">이전</string>
 
-    <string name="home_subtitle">흩어진 여행 정보를 한 번에</string>
+    <string name="auth_login_title">다시 만나서 반가워요</string>
+    <string name="auth_login_subtitle">계정으로 로그인하고 여행 추천을 이어가세요.</string>
+    <string name="auth_register_title">TripNest 시작하기</string>
+    <string name="auth_register_subtitle">간단히 가입하고 나만의 여행 기록을 만들어 보세요.</string>
+    <string name="auth_name_hint">이름</string>
+    <string name="auth_email_hint">이메일</string>
+    <string name="auth_password_hint">비밀번호</string>
+    <string name="auth_login_button">로그인</string>
+    <string name="auth_register_button">회원가입</string>
+    <string name="auth_toggle_register">계정 만들기</string>
+    <string name="auth_toggle_login">로그인으로 돌아가기</string>
+    <string name="auth_loading">처리 중...</string>
+    <string name="auth_name_required">이름을 입력해 주세요.</string>
+    <string name="auth_email_required">올바른 이메일을 입력해 주세요.</string>
+    <string name="auth_password_required">비밀번호는 8자 이상이어야 합니다.</string>
+    <string name="auth_error_default">요청을 처리하지 못했습니다.</string>
+    <string name="auth_signed_in_as">%1$s 계정으로 로그인됨</string>
+    <string name="auth_logout">로그아웃</string>
+
+    <string name="home_subtitle">광고를 줄이고 여행 계획을 한눈에</string>
     <string name="notifications">알림</string>
     <string name="search">검색</string>
-    <string name="search_hint">여행지를 검색해 보세요</string>
+    <string name="search_hint">도시나 여행지를 입력하세요</string>
     <string name="search_empty_message">검색어를 입력해 주세요.</string>
-    <string name="travel_style">여행 스타일</string>
+    <string name="trip_input_title">여행 조건</string>
+    <string name="trip_start_hint">출발일 선택</string>
+    <string name="trip_end_hint">도착일 선택</string>
+    <string name="trip_budget_hint">예산 선택 입력, 예: 300000</string>
+    <string name="trip_route_hint">동선 계획, 예: 대중교통 중심 / 도보 위주 / 렌터카</string>
+    <string name="trip_people_title">인원</string>
+    <string-array name="trip_adult">
+        <item>성인</item>
+        <item>1</item>
+        <item>2</item>
+        <item>3</item>
+        <item>4</item>
+        <item>5</item>
+        <item>6</item>
+        <item>7</item>
+        <item>8</item>
+        <item>9</item>
+        <item>10</item>
+    </string-array>
+    <string-array name="trip_youth">
+        <item>청소년</item>
+        <item>1</item>
+        <item>2</item>
+        <item>3</item>
+        <item>4</item>
+        <item>5</item>
+        <item>6</item>
+        <item>7</item>
+        <item>8</item>
+        <item>9</item>
+        <item>10</item>
+    </string-array>
+    <string-array name="trip_senior">
+        <item>노인</item>
+        <item>1</item>
+        <item>2</item>
+        <item>3</item>
+        <item>4</item>
+        <item>5</item>
+        <item>6</item>
+        <item>7</item>
+        <item>8</item>
+        <item>9</item>
+        <item>10</item>
+    </string-array>
+    <string-array name="trip_child">
+        <item>어린이</item>
+        <item>1</item>
+        <item>2</item>
+        <item>3</item>
+        <item>4</item>
+        <item>5</item>
+        <item>6</item>
+        <item>7</item>
+        <item>8</item>
+        <item>9</item>
+        <item>10</item>
+    </string-array>    <string-array name="transport_options">
+        <item>대중교통</item>
+        <item>도보</item>
+        <item>택시</item>
+        <item>렌터카</item>
+        <item>자전거</item>
+    </string-array>
+    <string name="trip_meta_format">일정 %1$s - %2$s · 예산 %3$s원</string>
+    <string name="trip_meta_partial_format">입력한 조건: %1$s</string>
+    <string name="travel_style">여행 취향</string>
     <string name="style_nature">자연</string>
     <string name="style_city">도시</string>
     <string name="style_food">맛집</string>
-    <string name="style_route">코스</string>
-    <string name="mvp_title">검색하면 요약과 추천이 시작됩니다</string>
-    <string name="mvp_description">여행지를 먼저 검색하고, 필요할 때만 지도로 위치를 선택해 주변 숙소와 관광지, 음식점을 확인하세요.</string>
+    <string name="style_route">동선</string>
+    <string name="mvp_title">여행 계획을 정리해드릴게요</string>
+    <string name="mvp_description">가볼 만한 곳, 숙소, 예상 비용과 남은 예산 기준의 동선까지 한 흐름으로 확인할 수 있게 준비 중입니다.</string>
+    <string name="feature_recommendation_title">추천</string>
+    <string name="feature_recommendation_body">관광지, 음식점, 숙소를 한 번에 비교해요.</string>
+    <string name="feature_map_title">지도</string>
+    <string name="feature_map_body">원하는 위치 주변 정보를 다시 찾아요.</string>
+    <string name="feature_summary_title">정리</string>
+    <string name="feature_summary_body">광고성 글은 덜어내고 핵심만 챙겨요.</string>
 
     <string name="back">뒤로가기</string>
     <string name="result_title_default">검색 결과</string>
     <string name="result_title_format">%1$s 여행 정보</string>
-    <string name="result_subtitle">AI 요약과 추천 장소</string>
+    <string name="result_subtitle">요약, 장소, 예산 체크</string>
     <string name="result_query_default">검색어</string>
-    <string name="filter_icon">!</string>
     <string name="ad_filter_message">광고성 문구를 제외하고 신뢰 가능한 정보만 보여줍니다.</string>
     <string name="ad_filter_message_format">광고성 문구 %1$d개를 제외하고 신뢰 가능한 정보만 보여줍니다.</string>
     <string name="gemini_summary_title">AI 요약</string>
     <string name="gemini_summary_text">여행지를 검색하면 요약이 표시됩니다.</string>
     <string name="gemini_summary_fallback">요약 생성에 실패했습니다. 잠시 후 다시 시도해 주세요.</string>
-    <string name="filter_all">전체</string>
-    <string name="filter_stay">숙소</string>
-    <string name="filter_food">음식</string>
-    <string name="filter_spot">관광</string>
-    <string name="recommended_places">추천 장소</string>
-    <string name="no_recommendations">추천 결과가 없습니다. 다른 키워드로 검색해 보세요.</string>
+    <string name="place_category_attraction">관광</string>
+    <string name="place_category_food">음식</string>
+    <string name="place_category_stay">숙소</string>
+    <string name="place_list_hint">카테고리를 고른 뒤 마음에 드는 장소를 담아 동선을 만들어보세요.</string>
+    <string name="selected_route_title">내가 갈 동선</string>
+    <string name="selected_route_empty">장소 카드에서 담기를 누르면 선택한 장소 기준으로 동선과 이동 예산을 계산합니다.</string>
+    <string name="selected_route_format">%1$s\n추정 비용: %2$s원</string>
+    <string name="selected_route_single_format">%1$s\n장소를 하나 더 담으면 이동 동선을 계산합니다.</string>
+    <string name="place_select">담기</string>
+    <string name="place_selected">해제</string>
+    <string name="no_recommendations">추천 결과가 없습니다. 다른 검색어로 검색해 보세요.</string>
     <string name="recommendations_loading">추천 장소를 찾는 중입니다.</string>
-    <string name="recommendations_unavailable">추천 장소를 불러오지 못했습니다. 서버가 켜져 있고 휴대폰과 PC가 같은 Wi-Fi에 있는지 확인해 주세요.</string>
+    <string name="recommendations_unavailable">추천 장소를 불러오지 못했습니다. 서버 연결을 확인해 주세요.</string>
+    <string name="related_articles_title">관련 글 정리</string>
+    <string name="selected_place_insight_loading">선택한 장소의 관련 글을 정리하는 중입니다.</string>
+    <string name="view_on_map">지도에서 보기</string>
+    <string name="close">닫기</string>
+    <string name="related_articles_empty">광고성 글을 제외한 관련 글을 찾지 못했습니다.</string>
+    <string name="sources_empty">표시할 출처가 없습니다.</string>
 
-    <string name="nearby_optional_title">주변 정보가 필요할 때</string>
-    <string name="nearby_optional_body">지도에서 위치를 선택하면 그 주변의 숙소, 관광지, 음식점을 찾아드립니다.</string>
+    <string name="map_reposition_title">지도에서 위치를 바꿔볼까요?</string>
     <string name="selected_coord_format">선택 좌표: %1$.6f, %2$.6f</string>
     <string name="map_default_coord">아직 위치를 선택하지 않았습니다.</string>
     <string name="map_pick_button">지도에서 위치 선택</string>
-    <string name="map_nearby_button">주변 검색</string>
     <string name="map_nearby_default">위치를 선택하면 주변 정보가 여기에 표시됩니다.</string>
     <string name="map_nearby_loading">주변 장소를 불러오는 중...</string>
     <string name="map_pick_title">지도에서 위치 선택</string>
     <string name="map_view_title">지도</string>
-    <string name="map_pick_hint">지도를 탭해서 위치를 선택해 주세요.</string>
-    <string name="map_pick_hint_center">지도를 움직여 핀을 원하는 위치에 맞춰 주세요.</string>
+    <string name="map_pick_hint_center">가운데 표시를 원하는 위치에 맞추고 선택 완료를 누르세요.</string>
     <string name="map_pick_confirm">선택 완료</string>
     <string name="map_current_location">현재 위치</string>
     <string name="map_location_unavailable">현재 위치를 가져올 수 없습니다.</string>
@@ -58,18 +157,32 @@
     <string name="nearby_label_stay">숙소: %1$s</string>
     <string name="nearby_label_attraction">관광: %1$s</string>
     <string name="nearby_label_food">음식: %1$s</string>
-    <string name="nearby_error_format">주변 검색 실패: %1$s</string>
-    <string name="nearby_connection_help">주변 정보를 불러오지 못했습니다. 서버가 켜져 있고 휴대폰과 PC가 같은 Wi-Fi에 있는지 확인해 주세요.</string>
+    <string name="nearby_connection_help">주변 정보를 불러오지 못했습니다. 서버 연결을 확인해 주세요.</string>
     <string name="no_data">데이터 없음</string>
 
     <string name="nav_home">홈</string>
     <string name="nav_map">지도</string>
     <string name="nav_my">내 여행</string>
     <string name="my_trip_title">내 여행</string>
-    <string name="my_trip_subtitle">최근 검색한 여행 정보를 모아봅니다</string>
+    <string name="my_trip_subtitle">계획, 예산, 정산을 한곳에서</string>
     <string name="my_trip_empty_title">아직 저장된 여행이 없습니다</string>
-    <string name="my_trip_empty_body">홈에서 여행지를 검색하고 지도에서 위치를 선택하면 최근 여행 정보가 여기에 표시됩니다.</string>
+    <string name="my_trip_empty_body">홈에서 여행지를 검색하고 지도에서 위치를 선택하면 최근 여행 정보가 표시됩니다.</string>
     <string name="my_trip_recent">최근 여행</string>
     <string name="my_trip_destination_format">여행지: %1$s</string>
     <string name="my_trip_location_format">선택 위치: %1$.6f, %2$.6f</string>
+    <string name="my_trip_route_format">동선:\n%1$s</string>
+
+    <string name="budget_title">예산 관리</string>
+    <string name="budget_total">총예산</string>
+    <string name="budget_left">남은 예산</string>
+    <string name="budget_split">1인 정산</string>
+    <string name="budget_total_hint">총예산, 예: 300000</string>
+    <string name="budget_people_hint">인원, 예: 2</string>
+    <string name="budget_save">예산 저장</string>
+    <string name="budget_hint">총예산을 비워두면 제한 없이 추천하고, 입력하면 앱이 추정한 여행 비용 기준으로 남은 금액과 1인 부담액을 계산합니다.</string>
+    <string name="budget_unlimited">예산 미설정: 비용 제한 없이 추천합니다.</string>
+    <string name="budget_summary_format">총 %1$s원 · 예상/사용 %2$s원 · 남은 %3$s원</string>
+    <string name="budget_split_format">1인 예상 부담: %1$s원</string>
+    <string name="budget_route_estimate_format">선택 숙소/동선 기준 추정 비용: %1$s원</string>
+    <string name="budget_saved">예산 정보를 저장했습니다.</string>
 </resources>
