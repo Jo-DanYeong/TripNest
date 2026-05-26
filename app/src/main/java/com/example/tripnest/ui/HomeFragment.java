@@ -27,6 +27,7 @@ public class HomeFragment extends Fragment {
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
 
+        // 홈에서 받은 검색 조건은 결과 화면으로 그대로 넘긴다.
         EditText searchInput = view.findViewById(R.id.et_search);
         EditText startDateInput = view.findViewById(R.id.et_start_date);
         EditText endDateInput = view.findViewById(R.id.et_end_date);
@@ -35,6 +36,7 @@ public class HomeFragment extends Fragment {
 
         view.findViewById(R.id.btn_search).setOnClickListener(openResults);
         searchInput.setOnEditorActionListener((textView, actionId, event) -> {
+            // 키보드의 검색 버튼과 물리 Enter 키를 같은 검색 동작으로 처리한다.
             boolean isSearchAction = actionId == EditorInfo.IME_ACTION_SEARCH;
             boolean isEnter = event != null
                     && event.getKeyCode() == KeyEvent.KEYCODE_ENTER
@@ -53,11 +55,13 @@ public class HomeFragment extends Fragment {
                              @NonNull EditText endDateInput,
                              @NonNull EditText budgetInput) {
         String query = searchInput.getText().toString().trim();
+        // 목적지가 없으면 추천 요청 자체가 의미 없어서 화면 이동 전에 막는다.
         if (query.isEmpty()) {
             Snackbar.make(view, R.string.search_empty_message, Snackbar.LENGTH_SHORT).show();
             return;
         }
 
+        // ResultFragment가 API 요청과 화면 표시를 모두 시작할 수 있도록 최소 입력값을 묶어 전달한다.
         Bundle args = new Bundle();
         args.putString("query", query);
         args.putString("startDate", startDateInput.getText().toString().trim());

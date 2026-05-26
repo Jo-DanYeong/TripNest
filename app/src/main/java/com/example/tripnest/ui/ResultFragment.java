@@ -35,7 +35,7 @@ public class ResultFragment extends Fragment {
     private static final String CATEGORY_FOOD = "\uC74C\uC2DD";
     private static final String CATEGORY_STAY = "\uC219\uC18C";
 
-    private final BackendClient backendClient = new BackendClient();
+    private BackendClient backendClient;
     private final List<Place> allPlaces = new ArrayList<>();
 
     private double selectedLatitude = 37.5665;
@@ -58,6 +58,8 @@ public class ResultFragment extends Fragment {
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
+        // 결과 화면은 추천 요청, 카테고리 탭, 지도 선택 결과를 한 번에 이어주는 중심 화면이다.
+        backendClient = new BackendClient(requireContext());
 
         view.findViewById(R.id.btn_back).setOnClickListener(v ->
                 Navigation.findNavController(view).navigateUp());
@@ -98,6 +100,7 @@ public class ResultFragment extends Fragment {
         recommendationEmptyView.setVisibility(View.VISIBLE);
         nearbyResultView.setVisibility(View.GONE);
 
+        // 지도 화면에서 선택한 좌표가 돌아오면 화면 표시와 주변 검색을 바로 갱신한다.
         getParentFragmentManager().setFragmentResultListener(
                 "map_pick_result",
                 getViewLifecycleOwner(),
@@ -109,6 +112,7 @@ public class ResultFragment extends Fragment {
                     runNearbySearch();
                 });
 
+        // 처음 진입하면 홈에서 받은 조건으로 추천 목록과 요약을 요청한다.
         backendClient.requestRecommendations(query, startDate, endDate, budgetWon, new BackendClient.Callback() {
             @Override
             public void onSuccess(TripRecommendation recommendation) {
@@ -149,12 +153,13 @@ public class ResultFragment extends Fragment {
     }
 
     private void selectCategory(String category) {
+        // 카테고리를 바꾸면 탭 색과 장소 목록을 함께 다시 그린다.
         selectedCategory = category;
         updateCategoryTabs();
         renderPlaceList();
     }
 
-    // Keeps the three category buttons visually in sync with the selected list.
+    // 세 개의 카테고리 버튼이 현재 목록 상태와 어긋나지 않게 맞춘다.
     private void updateCategoryTabs() {
         styleCategoryTab(attractionTab, CATEGORY_ATTRACTION.equals(selectedCategory));
         styleCategoryTab(foodTab, CATEGORY_FOOD.equals(selectedCategory));
@@ -162,11 +167,13 @@ public class ResultFragment extends Fragment {
     }
 
     private void styleCategoryTab(TextView tab, boolean selected) {
+        // 선택된 탭만 진한 배경을 쓰고, 나머지는 같은 pill 스타일로 낮춘다.
         tab.setBackgroundResource(selected ? R.drawable.bg_badge_green : R.drawable.bg_result_pill);
         tab.setTextColor(getResources().getColor(selected ? R.color.white : R.color.primary_dark, requireContext().getTheme()));
     }
 
     private void renderPlaceList() {
+        // 기존 목록을 지우고 현재 카테고리에 맞는 장소만 다시 쌓는다.
         if (placeListContainer == null) {
             return;
         }
@@ -191,7 +198,7 @@ public class ResultFragment extends Fragment {
         }
     }
 
-    // Uses the backend-normalized category first, so each tab shows only its own place type.
+    // 백엔드가 정리한 카테고리를 우선 사용해서 탭마다 자기 종류의 장소만 보이게 한다.
     private boolean isPlaceInSelectedCategory(Place place) {
         String category = place.category == null ? "" : place.category;
         if (CATEGORY_ATTRACTION.equals(selectedCategory)) {
@@ -203,12 +210,12 @@ public class ResultFragment extends Fragment {
         return category.contains(CATEGORY_STAY) || category.contains("\uC219\uBC15");
     }
 
-    // Builds a compact clickable row. The full article summary opens in a BottomSheet.
+    // 목록에서는 핵심만 작게 보여주고, 자세한 글 요약은 바텀시트에서 연다.
     private View createPlaceRow(Place place, int index) {
         LinearLayout row = new LinearLayout(requireContext());
-        row.setOrientation(LinearLayout.VERTICAL);
+        row.setOrientation(LinearLayout.HORIZONTAL);
         row.setBackgroundResource(R.drawable.bg_ai_box);
-        row.setPadding(dp(12), dp(10), dp(12), dp(10));
+        row.setPadding(dp(12), dp(12), dp(12), dp(12));
 
         LinearLayout.LayoutParams rowParams = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
@@ -217,25 +224,47 @@ public class ResultFragment extends Fragment {
         rowParams.setMargins(0, 0, 0, dp(8));
         row.setLayoutParams(rowParams);
 
+        TextView number = new TextView(requireContext());
+        number.setText(String.valueOf(index));
+        number.setGravity(android.view.Gravity.CENTER);
+        number.setBackgroundResource(R.drawable.bg_place_num);
+        number.setTextColor(getResources().getColor(R.color.white, requireContext().getTheme()));
+        number.setTextSize(12);
+        number.setTypeface(null, Typeface.BOLD);
+        LinearLayout.LayoutParams numberParams = new LinearLayout.LayoutParams(dp(30), dp(30));
+        numberParams.setMargins(0, 0, dp(10), 0);
+        row.addView(number, numberParams);
+
+        LinearLayout content = new LinearLayout(requireContext());
+        content.setOrientation(LinearLayout.VERTICAL);
+        row.addView(content, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1));
+
         TextView title = new TextView(requireContext());
-        title.setText(index + ". " + place.name);
+        title.setText(place.name);
         title.setTextColor(getResources().getColor(R.color.text_primary, requireContext().getTheme()));
         title.setTextSize(14);
         title.setTypeface(null, Typeface.BOLD);
-        row.addView(title);
+        content.addView(title);
 
         TextView body = new TextView(requireContext());
         body.setText(place.description == null || place.description.isEmpty() ? place.address : place.description);
         body.setTextColor(getResources().getColor(R.color.text_secondary, requireContext().getTheme()));
         body.setTextSize(12);
         body.setPadding(0, dp(4), 0, 0);
-        row.addView(body);
+        content.addView(body);
+
+        TextView meta = new TextView(requireContext());
+        meta.setText(place.category == null || place.category.isEmpty() ? "상세 보기" : place.category);
+        meta.setTextColor(getResources().getColor(R.color.primary_dark, requireContext().getTheme()));
+        meta.setTextSize(11);
+        meta.setPadding(0, dp(6), 0, 0);
+        content.addView(meta);
 
         row.setOnClickListener(v -> showPlaceDialog(place));
         return row;
     }
 
-    // Place detail lives in a modal so the main list does not jump or grow awkwardly.
+    // 장소 상세는 모달로 띄워서 목록 화면의 스크롤 위치가 갑자기 흔들리지 않게 한다.
     private void showPlaceDialog(Place place) {
         BottomSheetDialog dialog = new BottomSheetDialog(requireContext());
         View dialogView = getLayoutInflater().inflate(R.layout.dialog_place_detail, null);
@@ -276,7 +305,7 @@ public class ResultFragment extends Fragment {
         });
     }
 
-    // Opens the shared map screen in view-only mode with a marker at the selected place.
+    // 선택한 장소는 같은 지도 화면을 보기 모드로 열어 마커만 표시한다.
     private void openPlaceOnMap(Place place) {
         if (place == null || Double.isNaN(place.latitude) || Double.isNaN(place.longitude) || getView() == null) {
             return;
@@ -289,7 +318,7 @@ public class ResultFragment extends Fragment {
         Navigation.findNavController(getView()).navigate(R.id.action_resultFragment_to_mapPickFragment, args);
     }
 
-    // Source cards behave like embedded previews and open the original page in the browser.
+    // 출처 카드는 미리보기처럼 보이게 하고, 누르면 원문 페이지로 이동한다.
     private void renderSources(LinearLayout container, List<Source> sources) {
         if (container == null) {
             return;
@@ -313,6 +342,7 @@ public class ResultFragment extends Fragment {
     }
 
     private View createSourceCard(Source source) {
+        // 출처 제목, 매체명, 짧은 요약을 한 카드에 묶어 신뢰 근거를 남긴다.
         LinearLayout card = new LinearLayout(requireContext());
         card.setOrientation(LinearLayout.VERTICAL);
         card.setBackgroundResource(R.drawable.bg_ai_box);
@@ -358,6 +388,7 @@ public class ResultFragment extends Fragment {
     }
 
     private String joinTop(List<String> items) {
+        // 주변 검색 결과는 너무 길어지지 않도록 최대 세 개까지만 한 줄로 보여준다.
         if (items == null || items.isEmpty()) {
             return getString(R.string.no_data);
         }
@@ -366,6 +397,7 @@ public class ResultFragment extends Fragment {
     }
 
     private int parseBudget(String value) {
+        // 사용자가 쉼표나 원 단위를 붙여도 숫자만 뽑아 예산으로 사용한다.
         if (value == null) {
             return 0;
         }
@@ -377,6 +409,7 @@ public class ResultFragment extends Fragment {
     }
 
     private void renderTripMeta(TextView tripMetaView, String startDate, String endDate, int budgetWon) {
+        // 날짜나 예산 중 하나라도 있으면 결과 상단에 입력 조건을 짧게 남긴다.
         boolean hasDates = startDate != null && !startDate.isEmpty() && endDate != null && !endDate.isEmpty();
         boolean hasBudget = budgetWon > 0;
         if (!hasDates && !hasBudget) {
@@ -396,6 +429,7 @@ public class ResultFragment extends Fragment {
     }
 
     private void updateSelectedCoordText(TextView coordView) {
+        // 지도에서 돌아온 좌표를 사용자가 확인할 수 있는 형식으로 표시한다.
         String text = String.format(
                 Locale.KOREA,
                 getString(R.string.selected_coord_format),
@@ -406,6 +440,7 @@ public class ResultFragment extends Fragment {
     }
 
     private void saveLastQuery(String value) {
+        // 내 여행 화면에서 최근 검색지를 보여주기 위해 마지막 검색어를 저장한다.
         requireContext()
                 .getSharedPreferences(MyTripFragment.PREFS_NAME, android.content.Context.MODE_PRIVATE)
                 .edit()
@@ -414,6 +449,7 @@ public class ResultFragment extends Fragment {
     }
 
     private void saveLastLocation() {
+        // 마지막 지도 좌표도 함께 저장해 내 여행 화면에서 이어 볼 수 있게 한다.
         requireContext()
                 .getSharedPreferences(MyTripFragment.PREFS_NAME, android.content.Context.MODE_PRIVATE)
                 .edit()
@@ -423,6 +459,7 @@ public class ResultFragment extends Fragment {
     }
 
     private void runNearbySearch() {
+        // 지도 중심을 바꾼 뒤에는 주변 장소를 새로 불러와 현재 위치 기준으로 보정한다.
         nearbyResultView.setVisibility(View.VISIBLE);
         nearbyResultView.setText(getString(R.string.map_nearby_loading));
         backendClient.requestNearby(selectedLatitude, selectedLongitude, 2000, new BackendClient.NearbyCallback() {
