@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import { spawnSync } from "node:child_process";
 
-// Real Android phones can reach the PC backend through adb reverse.
+// 실제 Android 기기가 PC의 로컬 백엔드에 접근할 수 있도록 adb reverse를 설정한다.
 export function setupAdbReverse(config, targetPort) {
   if (String(config.ENABLE_ADB_REVERSE || "true").toLowerCase() === "false") {
     return;
@@ -29,6 +29,7 @@ export function setupAdbReverse(config, targetPort) {
 }
 
 function findAdbPath(config) {
+  // .env 지정 경로, Android SDK 기본 위치, PATH 순서로 adb를 찾는다.
   const candidates = [
     config.ADB_PATH,
     config.LOCALAPPDATA ? `${config.LOCALAPPDATA}\\Android\\Sdk\\platform-tools\\adb.exe` : "",

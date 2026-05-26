@@ -1,10 +1,10 @@
-// Catches both explicit ads and softer "hidden ad" patterns.
+// 명시적인 광고 문구와 체험단/협찬처럼 숨은 광고 패턴을 함께 잡는다.
 export function isAdvertorialArticle(article) {
   const text = `${article.title} ${article.summary} ${article.source}`.toLowerCase();
   const definiteAdWords = [
     "광고", "홍보", "협찬", "제휴", "체험단", "원고료", "소정의", "파트너스",
     "제공받", "무료제공", "내돈내산 아님", "업체로부터", "대가를 받",
-    "지원받", "제공된", "제공받은", "본 포스팅은"
+    "지원받", "제공됨", "제공받은", "본 포스팅"
   ];
   if (definiteAdWords.some((word) => text.includes(word.toLowerCase()))) {
     return true;
@@ -19,10 +19,11 @@ export function isAdvertorialArticle(article) {
   ];
   const hypeWords = [
     "인생맛집", "꼭 가야하는", "안 가면 후회", "최고의 선택", "완벽한",
-    "필수코스", "확실한", "믿고 가는", "역대급"
+    "필수코스", "정답은", "믿고 가는", "찐 후기"
   ];
   const commercialActionWords = ["예약", "쿠폰", "할인", "문의", "구매", "바로가기"];
 
+  // 단어 하나만으로 광고를 단정하지 않고, 의심 단어와 과장 표현의 조합을 본다.
   const suspiciousScore = suspiciousWords.reduce((score, word) =>
     text.includes(word.toLowerCase()) ? score + 1 : score, 0);
   const hypeScore = hypeWords.reduce((score, word) =>

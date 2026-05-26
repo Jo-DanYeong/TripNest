@@ -2,6 +2,7 @@ import { formatWon } from "../utils/utils.js";
 
 export function createAiClient(config) {
   async function createTripSummary({ destination, durationDays, startDate, endDate, budgetWon, styles, places, relatedArticles }) {
+    // AI에 넘길 재료를 먼저 짧게 압축해 토큰 낭비와 과한 설명을 줄인다.
     const placeNames = places.map((place) => place.name).filter(Boolean).join(", ");
     const articleTitles = relatedArticles.map((article) => article.title).filter(Boolean).slice(0, 4).join(", ");
     const tripDates = startDate && endDate ? `${startDate}부터 ${endDate}까지` : `${durationDays}일 일정`;
@@ -14,16 +15,17 @@ export function createAiClient(config) {
       `여행지: ${destination}`,
       `날짜: ${tripDates}`,
       `예산: ${budgetText}`,
-      `여행 스타일: ${styles.join(", ")}`,
+      `여행 취향: ${styles.join(", ")}`,
       `추천 장소: ${placeNames || "아직 없음"}`,
       `관련 글 제목: ${articleTitles || "없음"}`,
-      "광고성 표현은 제외하고 한국어로 2문장 요약해 주세요. 예산이 있으면 너무 비싼 선택을 피한다는 관점도 반영해 주세요."
+      "광고성 표현은 제외하고 한국어로 2문장 요약해 주세요. 예산이 있으면 너무 비싼 선택을 피하는 관점도 반영해 주세요."
     ].join("\n");
 
     return requestGroqSummary(prompt, fallback);
   }
 
   async function createArticleSummary(targetName, articles) {
+    // 출처가 없을 때도 화면은 자연스럽게 비어 있는 상태를 설명해야 한다.
     if (articles.length === 0) {
       return "광고성 글을 제외한 관련 글을 아직 찾지 못했습니다.";
     }
@@ -45,6 +47,7 @@ export function createAiClient(config) {
   }
 
   async function requestGroqSummary(prompt, fallback) {
+    // API 키가 없거나 외부 호출이 실패하면 앱이 멈추지 않도록 준비된 fallback을 사용한다.
     if (!config.GROQ_API_KEY) {
       return fallback;
     }
