@@ -1,0 +1,30 @@
+{
+  "expo": {
+    "name": "TripNest",
+    "slug": "tripnest",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "scheme": "tripnest",
+    "userInterfaceStyle": "light",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.tripnest.mobile",
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "TripNest uses your location to find nearby stays, attractions, and restaurants."
+      }
+    },
+    "android": {
+      "package": "com.tripnest.mobile",
+      "permissions": [
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_FINE_LOCATION"
+      ]
+    },
+    "plugins": [
+      "expo-location"
+    ],
+    "extra": {
+      "backendBaseUrl": "http://127.0.0.1:8080"
+    }
+  }
+}
