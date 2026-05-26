@@ -67,6 +67,11 @@ public class HomeFragment extends Fragment {
         args.putString("startDate", startDateInput.getText().toString().trim());
         args.putString("endDate", endDateInput.getText().toString().trim());
         args.putString("budgetWon", budgetInput.getText().toString().trim());
+        args.putString("routePlan", String.valueOf(transportSpinner.getSelectedItem()));
+        args.putString("adultCount", normalizeCount(adultSpinner,0));
+        args.putString("youthCount", normalizeCount(youthSpinner,0));
+        args.putString("seniorCount", normalizeCount(seniorSpinner,0));
+        args.putString("childCount", normalizeCount(childSpinner,0));
         Navigation.findNavController(view).navigate(R.id.action_homeFragment_to_resultFragment, args);
     }
 
