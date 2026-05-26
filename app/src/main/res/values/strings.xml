@@ -31,6 +31,7 @@
     <string name="search">검색</string>
     <string name="search_hint">도시나 여행지를 입력하세요</string>
     <string name="search_empty_message">검색어를 입력해 주세요.</string>
+    <string name="input_trip_headcount">인원수는 1명 이상이어야 합니다.</string>
     <string name="trip_input_title">여행 조건</string>
     <string name="trip_start_hint">출발일 선택</string>
     <string name="trip_end_hint">도착일 선택</string>
