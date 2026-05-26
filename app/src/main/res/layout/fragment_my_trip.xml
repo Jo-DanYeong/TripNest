@@ -110,6 +110,17 @@
                     android:textSize="16sp"
                     android:textStyle="bold" />
 
+                <TextView
+                    android:id="@+id/tv_budget_route_estimate"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:background="@drawable/bg_ai_box"
+                    android:padding="10dp"
+                    android:text="@string/budget_unlimited"
+                    android:textColor="@color/ink_muted"
+                    android:textSize="12sp" />
+
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -133,10 +144,11 @@
                             android:textSize="11sp" />
 
                         <TextView
+                            android:id="@+id/tv_budget_total"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="4dp"
-                            android:text="@string/budget_total_value"
+                            android:text="0원"
                             android:textColor="@color/text_primary"
                             android:textSize="14sp"
                             android:textStyle="bold" />
@@ -159,10 +171,11 @@
                             android:textSize="11sp" />
 
                         <TextView
+                            android:id="@+id/tv_budget_left"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="4dp"
-                            android:text="@string/budget_left_value"
+                            android:text="제한 없음"
                             android:textColor="@color/primary_dark"
                             android:textSize="14sp"
                             android:textStyle="bold" />
@@ -184,10 +197,11 @@
                             android:textSize="11sp" />
 
                         <TextView
+                            android:id="@+id/tv_budget_split"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="4dp"
-                            android:text="@string/budget_split_value"
+                            android:text="0원"
                             android:textColor="@color/text_primary"
                             android:textSize="14sp"
                             android:textStyle="bold" />
@@ -195,6 +209,7 @@
                 </LinearLayout>
 
                 <TextView
+                    android:id="@+id/tv_budget_summary"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="12dp"
@@ -204,6 +219,30 @@
                     android:text="@string/budget_hint"
                     android:textColor="@color/ink_muted"
                     android:textSize="12sp" />
+
+                <EditText
+                    android:id="@+id/et_budget_total"
+                    android:layout_width="match_parent"
+                    android:layout_height="48dp"
+                    android:layout_marginTop="12dp"
+                    android:background="@drawable/bg_search_bar"
+                    android:hint="@string/budget_total_hint"
+                    android:inputType="number"
+                    android:paddingStart="12dp"
+                    android:paddingEnd="12dp"
+                    android:singleLine="true"
+                    android:textColor="@color/text_primary"
+                    android:textColorHint="@color/text_secondary"
+                    android:textSize="13sp" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btn_save_budget"
+                    android:layout_width="match_parent"
+                    android:layout_height="46dp"
+                    android:layout_marginTop="10dp"
+                    android:text="@string/budget_save"
+                    android:textAllCaps="false"
+                    app:cornerRadius="8dp" />
             </LinearLayout>
 
             <com.google.android.material.button.MaterialButton

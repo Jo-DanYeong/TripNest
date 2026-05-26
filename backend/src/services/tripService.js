@@ -4,10 +4,10 @@ import { clampNumber, estimateDurationDays, normalizeText } from "../utils/utils
 
 export function createTripService({ config, kakaoClient, aiClient }) {
   async function buildRecommendation(body) {
-    // 프론트에서 넘어온 조건을 백엔드 기준으로 다시 정리한다.
     const destination = normalizeText(body.destination);
     const startDate = normalizeText(body.startDate);
     const endDate = normalizeText(body.endDate);
+    const routePlan = normalizeText(body.routePlan);
     const budgetWon = clampNumber(body.budgetWon, 0, 0, 100000000);
     const durationDays = estimateDurationDays(startDate, endDate, body.durationDays);
     const styles = Array.isArray(body.styles) && body.styles.length > 0
@@ -21,8 +21,10 @@ export function createTripService({ config, kakaoClient, aiClient }) {
         startDate,
         endDate,
         budgetWon,
+        routePlan,
         styles,
         filteredAdCount: 0,
+        lodgingNightlyCostWon: 0,
         summary: "여행지를 먼저 검색해 주세요.",
         places: [],
         relatedSummary: "",
@@ -30,19 +32,37 @@ export function createTripService({ config, kakaoClient, aiClient }) {
       };
     }
 
-    // 장소 검색과 관련 글 검색은 서로 독립이라 동시에 실행한다.
-    const [places, rawArticles] = await Promise.all([
+    const [places, rawArticles, lodgingArticles] = await Promise.all([
       kakaoClient.searchRecommendedPlaces(destination),
-      kakaoClient.searchRelatedArticles(destination)
+      kakaoClient.searchRelatedArticles(destination),
+      kakaoClient.searchRelatedArticles(`${destination} 숙소 호텔 1박 가격`)
     ]);
     const trustedArticles = rawArticles.filter((article) => !isAdvertorialArticle(article));
     const sources = trustedArticles.slice(0, 5);
     const filteredAdCount = rawArticles.length - trustedArticles.length;
 
-    // AI 요약도 장소 추천 결과와 정제된 출처를 기반으로 만든다.
-    const [summary, relatedSummary] = await Promise.all([
-      aiClient.createTripSummary({ destination, durationDays, startDate, endDate, budgetWon, styles, places, relatedArticles: sources }),
-      aiClient.createArticleSummary(destination, sources)
+    const [summary, relatedSummary, lodgingNightlyCostWon] = await Promise.all([
+      aiClient.createTripSummary({
+        destination,
+        durationDays,
+        startDate,
+        endDate,
+        budgetWon,
+        routePlan,
+        styles,
+        places,
+        relatedArticles: sources
+      }),
+      aiClient.createArticleSummary(destination, sources),
+      aiClient.estimateLodgingNightlyCost({
+        destination,
+        lodgingName: "",
+        durationDays,
+        startDate,
+        endDate,
+        budgetWon,
+        relatedArticles: lodgingArticles.slice(0, 5)
+      })
     ]);
 
     return {
@@ -51,8 +71,10 @@ export function createTripService({ config, kakaoClient, aiClient }) {
       startDate,
       endDate,
       budgetWon,
+      routePlan,
       styles,
       filteredAdCount,
+      lodgingNightlyCostWon,
       summary,
       places,
       relatedSummary,
@@ -61,7 +83,6 @@ export function createTripService({ config, kakaoClient, aiClient }) {
   }
 
   async function buildPlaceInsight(body) {
-    // 사용자가 고른 장소 하나에 대해 관련 글을 다시 찾아 더 자세한 요약을 만든다.
     const destination = normalizeText(body.destination);
     const placeName = normalizeText(body.placeName);
     const category = normalizeText(body.category);
@@ -70,17 +91,69 @@ export function createTripService({ config, kakaoClient, aiClient }) {
     }
 
     const queryBase = destination ? `${destination} ${placeName}` : placeName;
-    const rawArticles = await kakaoClient.searchRelatedArticles(queryBase);
-    const trustedArticles = rawArticles.filter((article) => !isAdvertorialArticle(article));
-    const sources = trustedArticles.slice(0, 5);
-    const filteredAdCount = rawArticles.length - trustedArticles.length;
-    const summary = await aiClient.createArticleSummary(`${placeName}${category ? ` (${category})` : ""}`, sources);
+    const priceQuery = `${queryBase} 메뉴 가격 1인 비용`;
+    const [rawArticles, rawPriceArticles] = await Promise.all([
+      kakaoClient.searchRelatedArticles(queryBase),
+      kakaoClient.searchRelatedArticles(priceQuery)
+    ]);
 
-    return { placeName, category, filteredAdCount, summary, sources };
+    const trustedArticles = rawArticles.filter((article) => !isAdvertorialArticle(article));
+    const priceArticles = rawPriceArticles.filter((article) => !isAdvertorialArticle(article));
+    const sources = trustedArticles.slice(0, 5);
+    const priceSources = priceArticles.length > 0 ? priceArticles.slice(0, 5) : sources;
+    const filteredAdCount = rawArticles.length - trustedArticles.length;
+    const durationDays = estimateDurationDays(normalizeText(body.startDate), normalizeText(body.endDate), body.durationDays);
+    const startDate = normalizeText(body.startDate);
+    const endDate = normalizeText(body.endDate);
+    const budgetWon = clampNumber(body.budgetWon, 0, 0, 100000000);
+    const adultCount = clampNumber(body.adultCount, 1, 0, 50);
+    const youthCount = clampNumber(body.youthCount, 0, 0, 50);
+    const seniorCount = clampNumber(body.seniorCount, 0, 0, 50);
+    const childCount = clampNumber(body.childCount, 0, 0, 50);
+
+    const [summary, lodgingNightlyCostWon, mealCostWon, admissionCost] = await Promise.all([
+      aiClient.createArticleSummary(`${placeName}${category ? ` (${category})` : ""}`, sources),
+      aiClient.estimateLodgingNightlyCost({
+        destination,
+        lodgingName: placeName,
+        durationDays,
+        startDate,
+        endDate,
+        budgetWon,
+        relatedArticles: priceSources
+      }),
+      aiClient.estimateMealCost({
+        destination,
+        placeName,
+        relatedArticles: priceSources
+      }),
+      aiClient.estimateAdmissionCost({
+        destination,
+        placeName,
+        adultCount,
+        youthCount,
+        seniorCount,
+        childCount,
+        relatedArticles: priceSources
+      })
+    ]);
+
+    return {
+      placeName,
+      category,
+      filteredAdCount,
+      summary,
+      lodgingNightlyCostWon,
+      mealCostWon,
+      admissionAdultWon: admissionCost.adult,
+      admissionYouthWon: admissionCost.youth,
+      admissionSeniorWon: admissionCost.senior,
+      admissionChildWon: admissionCost.child,
+      sources
+    };
   }
 
   async function findNearbyPlaces(body) {
-    // 지도에서 선택한 좌표를 기준으로 Kakao 카테고리 검색을 수행한다.
     const latitude = Number(body.latitude);
     const longitude = Number(body.longitude);
     const radiusMeters = clampNumber(body.radiusMeters, 2000, 300, 20000);

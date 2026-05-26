@@ -1,12 +1,16 @@
 package com.example.tripnest.ui;
 
+import android.app.DatePickerDialog;
 import android.os.Bundle;
 import android.view.KeyEvent;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.inputmethod.EditorInfo;
+import android.widget.ArrayAdapter;
 import android.widget.EditText;
+import android.widget.Spinner;
+
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
@@ -14,6 +18,10 @@ import androidx.navigation.Navigation;
 
 import com.example.tripnest.R;
 import com.google.android.material.snackbar.Snackbar;
+
+import java.text.SimpleDateFormat;
+import java.util.Calendar;
+import java.util.Locale;
 
 public class HomeFragment extends Fragment {
 
@@ -27,16 +35,40 @@ public class HomeFragment extends Fragment {
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
 
-        // 홈에서 받은 검색 조건은 결과 화면으로 그대로 넘긴다.
         EditText searchInput = view.findViewById(R.id.et_search);
         EditText startDateInput = view.findViewById(R.id.et_start_date);
         EditText endDateInput = view.findViewById(R.id.et_end_date);
         EditText budgetInput = view.findViewById(R.id.et_budget);
-        View.OnClickListener openResults = v -> openResults(view, searchInput, startDateInput, endDateInput, budgetInput);
+        Spinner transportSpinner = view.findViewById(R.id.spinner_transport);
+        Spinner adultSpinner = view.findViewById(R.id.spinner_adult);
+        Spinner youthSpinner = view.findViewById(R.id.spinner_youth);
+        Spinner seniorSpinner = view.findViewById(R.id.spinner_senior);
+        Spinner childSpinner = view.findViewById(R.id.spinner_child);
+
+        setupDateInput(startDateInput);
+        setupDateInput(endDateInput);
+        setupTransportSpinner(transportSpinner,"transport");
+        setupTransportSpinner(adultSpinner,"adult");
+        setupTransportSpinner(youthSpinner,"youth");
+        setupTransportSpinner(seniorSpinner,"senior");
+        setupTransportSpinner(childSpinner,"child");
+
+        View.OnClickListener openResults = v ->
+                openResults(
+                        view,
+                        searchInput,
+                        startDateInput,
+                        endDateInput,
+                        budgetInput,
+                        transportSpinner,
+                        adultSpinner,
+                        youthSpinner,
+                        seniorSpinner,
+                        childSpinner
+                );
 
         view.findViewById(R.id.btn_search).setOnClickListener(openResults);
         searchInput.setOnEditorActionListener((textView, actionId, event) -> {
-            // 키보드의 검색 버튼과 물리 Enter 키를 같은 검색 동작으로 처리한다.
             boolean isSearchAction = actionId == EditorInfo.IME_ACTION_SEARCH;
             boolean isEnter = event != null
                     && event.getKeyCode() == KeyEvent.KEYCODE_ENTER
@@ -49,23 +81,85 @@ public class HomeFragment extends Fragment {
         });
     }
 
+    private void setupTransportSpinner(Spinner spinner,String option) {
+        int temp = 0;
+        switch (option){
+            case "transport":
+                temp = R.array.transport_options;
+                break;
+            case "adult":
+                temp = R.array.trip_adult;
+                break;
+            case "youth":
+                temp = R.array.trip_youth;
+                break;
+            case "senior":
+                temp = R.array.trip_senior;
+                break;
+            case "child":
+                temp = R.array.trip_child;
+                break;
+        }
+        ArrayAdapter<CharSequence> adapter = ArrayAdapter.createFromResource(
+                requireContext(),
+                temp,
+                android.R.layout.simple_spinner_item
+        );
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        spinner.setAdapter(adapter);
+    }
+
+    private void setupDateInput(EditText input) {
+        input.setFocusable(false);
+        input.setCursorVisible(false);
+        input.setOnClickListener(v -> showDatePicker(input));
+    }
+
+    private void showDatePicker(EditText target) {
+        Calendar calendar = Calendar.getInstance();
+        DatePickerDialog dialog = new DatePickerDialog(
+                requireContext(),
+                (view, year, month, dayOfMonth) ->
+                        target.setText(String.format(Locale.KOREA, "%04d-%02d-%02d", year, month + 1, dayOfMonth)),
+                calendar.get(Calendar.YEAR),
+                calendar.get(Calendar.MONTH),
+                calendar.get(Calendar.DAY_OF_MONTH)
+        );
+        dialog.show();
+    }
+
     private void openResults(@NonNull View view,
                              @NonNull EditText searchInput,
                              @NonNull EditText startDateInput,
                              @NonNull EditText endDateInput,
-                             @NonNull EditText budgetInput) {
+                             @NonNull EditText budgetInput,
+                             @NonNull Spinner transportSpinner,
+                             @NonNull Spinner adultSpinner,
+                             @NonNull Spinner youthSpinner,
+                             @NonNull Spinner seniorSpinner,
+                             @NonNull Spinner childSpinner) {
         String query = searchInput.getText().toString().trim();
-        // 목적지가 없으면 추천 요청 자체가 의미 없어서 화면 이동 전에 막는다.
         if (query.isEmpty()) {
             Snackbar.make(view, R.string.search_empty_message, Snackbar.LENGTH_SHORT).show();
             return;
         }
 
-        // ResultFragment가 API 요청과 화면 표시를 모두 시작할 수 있도록 최소 입력값을 묶어 전달한다.
+        String startDate = startDateInput.getText().toString().trim();
+        String endDate = endDateInput.getText().toString().trim();
+        if (startDate.isEmpty() && endDate.isEmpty()) {
+            String today = new SimpleDateFormat("yyyy-MM-dd", Locale.KOREA).format(Calendar.getInstance().getTime());
+            startDate = today;
+            endDate = today;
+        } else if (startDate.isEmpty()) {
+            startDate = endDate;
+        } else if (endDate.isEmpty()) {
+            endDate = startDate;
+        }
+
         Bundle args = new Bundle();
         args.putString("query", query);
-        args.putString("startDate", startDateInput.getText().toString().trim());
-        args.putString("endDate", endDateInput.getText().toString().trim());
+        args.putString("startDate", startDate);
+        args.putString("endDate", endDate);
         args.putString("budgetWon", budgetInput.getText().toString().trim());
         args.putString("routePlan", String.valueOf(transportSpinner.getSelectedItem()));
         args.putString("adultCount", normalizeCount(adultSpinner,0));

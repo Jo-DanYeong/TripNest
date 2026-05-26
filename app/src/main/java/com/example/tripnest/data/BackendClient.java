@@ -42,11 +42,11 @@ public class BackendClient {
     private final ExecutorService executor = Executors.newSingleThreadExecutor();
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
     private final ServerConfig serverConfig;
-
-    public BackendClient() {
-        // 테스트나 단순 호출에서는 BuildConfig의 서버 주소만 사용한다.
-        this.serverConfig = null;
-    }
+//
+//    public BackendClient() {
+//        // 테스트나 단순 호출에서는 BuildConfig의 서버 주소만 사용한다.
+//        this.serverConfig = null;
+//    }
 
     public BackendClient(Context context) {
         // 앱 화면에서도 서버 주소는 런타임 입력값이 아니라 빌드 설정을 따른다.
@@ -104,6 +104,11 @@ public class BackendClient {
                                        String startDate,
                                        String endDate,
                                        int budgetWon,
+                                       String routePlan,
+                                       int adultCount,
+                                       int youthCount,
+                                       int seniorCount,
+                                       int childCount,
                                        Callback callback) {
         // 홈에서 받은 조건을 추천 API payload로 만들고, 응답은 화면 모델로 바꿔 돌려준다.
         executor.execute(() -> {
@@ -114,6 +119,11 @@ public class BackendClient {
                 requestBody.put("endDate", endDate == null ? "" : endDate.trim());
                 requestBody.put("budgetWon", Math.max(0, budgetWon));
                 requestBody.put("durationDays", 3);
+                requestBody.put("routePlan", routePlan == null ? "" : routePlan.trim());
+                requestBody.put("adultCount", Math.max(0, adultCount));
+                requestBody.put("youthCount", Math.max(0, youthCount));
+                requestBody.put("seniorCount", Math.max(0, seniorCount));
+                requestBody.put("childCount", Math.max(0, childCount));
                 requestBody.put("styles", new JSONArray().put("자연").put("맛집").put("동선"));
 
                 JSONObject response = postJsonWithFallback(
@@ -130,6 +140,7 @@ public class BackendClient {
                         response.optString("summary"),
                         response.optString("relatedSummary"),
                         response.optInt("filteredAdCount"),
+                        response.optInt("lodgingNightlyCostWon"),
                         places,
                         parseSources(response.optJSONArray("sources"))
                 );
@@ -156,6 +167,45 @@ public class BackendClient {
                         parseSources(response.optJSONArray("sources"))
                 );
                 mainHandler.post(() -> callback.onSuccess(result));
+            } catch (Exception error) {
+                mainHandler.post(() -> callback.onError(error));
+            }
+        });
+    }
+
+    public void requestPlaceCostEstimate(String destination,
+                                         Place place,
+                                         String startDate,
+                                         String endDate,
+                                         int budgetWon,
+                                         int adultCount,
+                                         int youthCount,
+                                         int seniorCount,
+                                         int childCount,
+                                         PlaceCostEstimateCallback callback) {
+        executor.execute(() -> {
+            try {
+                JSONObject requestBody = new JSONObject();
+                requestBody.put("destination", destination == null ? "" : destination.trim());
+                requestBody.put("placeName", place == null ? "" : place.name);
+                requestBody.put("category", place == null ? "" : place.category);
+                requestBody.put("startDate", startDate == null ? "" : startDate.trim());
+                requestBody.put("endDate", endDate == null ? "" : endDate.trim());
+                requestBody.put("budgetWon", Math.max(0, budgetWon));
+                requestBody.put("adultCount", Math.max(0, adultCount));
+                requestBody.put("youthCount", Math.max(0, youthCount));
+                requestBody.put("seniorCount", Math.max(0, seniorCount));
+                requestBody.put("childCount", Math.max(0, childCount));
+
+                JSONObject response = postJsonWithFallback("/api/places/insights", requestBody, null);
+                mainHandler.post(() -> callback.onSuccess(
+                        response.optInt("lodgingNightlyCostWon"),
+                        response.optInt("mealCostWon"),
+                        response.optInt("admissionAdultWon"),
+                        response.optInt("admissionYouthWon"),
+                        response.optInt("admissionSeniorWon"),
+                        response.optInt("admissionChildWon")
+                ));
             } catch (Exception error) {
                 mainHandler.post(() -> callback.onError(error));
             }
@@ -426,6 +476,16 @@ public class BackendClient {
 
     public interface PlaceInsightCallback {
         void onSuccess(PlaceInsight result);
+        void onError(Exception error);
+    }
+
+    public interface PlaceCostEstimateCallback {
+        void onSuccess(int nightlyCostWon,
+                       int mealCostWon,
+                       int admissionAdultWon,
+                       int admissionYouthWon,
+                       int admissionSeniorWon,
+                       int admissionChildWon);
         void onError(Exception error);
     }
 
