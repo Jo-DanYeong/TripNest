@@ -69,4 +69,13 @@ public class HomeFragment extends Fragment {
         args.putString("budgetWon", budgetInput.getText().toString().trim());
         Navigation.findNavController(view).navigate(R.id.action_homeFragment_to_resultFragment, args);
     }
+
+    private String normalizeCount(Spinner input, int fallback) {
+        // 1. 스피너에서 텍스트를 가져오고 null이면 fallback 처리
+        String strCnt = input.getSelectedItem() == null ? "" : input.getSelectedItem().toString().trim();
+        // 2. 숫자가 아닌 모든 문자 제거 (예: "성인 3명" -> "3")
+        strCnt = strCnt.replaceAll("[^0-9]", "");
+        // 3. 비어있으면 fallback 반환, 숫자가 있으면 그대로 반환
+        return strCnt.isEmpty() ? String.valueOf(fallback) : strCnt;
+    }
 }
