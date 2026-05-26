@@ -157,6 +157,15 @@ public class HomeFragment extends Fragment {
         }
 
         Bundle args = new Bundle();
+        String adultCnt = normalizeCount(adultSpinner,0),
+                youthCnt = normalizeCount(youthSpinner,0),
+                seniorCnt = normalizeCount(seniorSpinner,0),
+                childCnt = normalizeCount(childSpinner,0);
+
+        if (adultCnt.equals("0") && youthCnt.equals("0") && seniorCnt.equals("0") && childCnt.equals("0")){
+            Snackbar.make(view, R.string.input_trip_headcount, Snackbar.LENGTH_SHORT).show();
+            return;
+        }
         args.putString("query", query);
         args.putString("startDate", startDate);
         args.putString("endDate", endDate);
