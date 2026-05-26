@@ -1,0 +1,4 @@
+sdk.dir=Your AndriodStudio address
+KAKAO_NATIVE_APP_KEY= YOUR KAKAO_MAP NATIVE KEY
+BACKEND_BASE_URL= your backend address
+BACKEND_FALLBACK_URL= your backend address
