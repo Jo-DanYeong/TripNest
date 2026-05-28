@@ -426,3 +426,6 @@ tripnest-expo/
 !/gradle/wrapper/gradle-wrapper.jar
 
 # End of https://www.toptal.com/developers/gitignore/api/androidstudio,intellij,visualstudiocode,java,node,powershell
+/Key
+/data/users.json
+/app/release/

@@ -21,8 +21,12 @@ public class AuthSession {
     }
 
     public boolean isSignedIn() {
-        // 토큰 존재 여부만으로 간단히 로그인 상태를 판단한다.
-        return getToken() != null && !getToken().trim().isEmpty();
+        String token = getToken() == null ? "" : getToken().trim();
+        if (token.startsWith("local-login-") || token.startsWith("local-register-")) {
+            clear();
+            return false;
+        }
+        return !token.isEmpty();
     }
 
     public String getToken() {
