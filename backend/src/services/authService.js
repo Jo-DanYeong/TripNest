@@ -1,12 +1,17 @@
+import crypto from "node:crypto";
+import fs from "node:fs";
+import path from "node:path";
+
 import { httpError } from "../http/http.js";
 import { normalizeText } from "../utils/utils.js";
 
-// 개발용 로컬 인증이다. 운영 인증이 준비되면 Firebase/JWT 검증 흐름으로 교체하면 된다.
+const authDataDir = path.resolve("data");
+const usersFile = path.join(authDataDir, "users.json");
+
 export function buildAuthResponse(body, isRegister) {
-  // 프론트와 같은 검증 기준을 서버에서도 한 번 더 적용한다.
   const email = normalizeText(body.email).toLowerCase();
   const password = normalizeText(body.password);
-  const fallbackName = email.includes("@") ? email.split("@")[0] : "여행자";
+  const fallbackName = email.includes("@") ? email.split("@")[0] : "TripNest";
   const name = normalizeText(body.name, fallbackName);
 
   if (!email.includes("@")) {
@@ -16,13 +21,52 @@ export function buildAuthResponse(body, isRegister) {
     throw httpError(400, "비밀번호는 8자 이상이어야 합니다.");
   }
 
-  // 실제 계정 저장소가 없으므로 이메일 기반의 안정적인 로컬 토큰/ID를 만든다.
-  return {
-    token: `local-${isRegister ? "register" : "login"}-${Buffer.from(email).toString("base64url")}`,
-    user: {
-      id: Buffer.from(email).toString("base64url"),
+  const users = loadUsers();
+  const existingUser = users[email];
+
+  if (isRegister) {
+    if (existingUser) {
+      throw httpError(409, "이미 가입된 이메일입니다.");
+    }
+    users[email] = {
+      id: stableUserId(email),
       email,
-      name
+      name,
+      passwordHash: hashPassword(password)
+    };
+    saveUsers(users);
+  } else if (!existingUser || existingUser.passwordHash !== hashPassword(password)) {
+    throw httpError(401, "이메일 또는 비밀번호가 올바르지 않습니다.");
+  }
+
+  const user = users[email];
+  return {
+    token: `local-${crypto.randomUUID()}`,
+    user: {
+      id: user.id,
+      email: user.email,
+      name: user.name
     }
   };
+}
+
+function loadUsers() {
+  try {
+    return JSON.parse(fs.readFileSync(usersFile, "utf8"));
+  } catch {
+    return {};
+  }
+}
+
+function saveUsers(users) {
+  fs.mkdirSync(authDataDir, { recursive: true });
+  fs.writeFileSync(usersFile, JSON.stringify(users, null, 2), "utf8");
+}
+
+function stableUserId(email) {
+  return crypto.createHash("sha256").update(email).digest("base64url").slice(0, 24);
+}
+
+function hashPassword(password) {
+  return crypto.createHash("sha256").update(password).digest("base64url");
 }

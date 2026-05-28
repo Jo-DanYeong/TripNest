@@ -324,7 +324,51 @@
 <!--                            android:textSize="12sp" />-->
                     </LinearLayout>
                 </LinearLayout>
+                <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="10dp"
+                        android:layout_marginBottom="8dp"
+                        android:text="@string/travel_style"
+                        android:textColor="@color/ink_muted"
+                        android:textSize="13sp"
+                        android:textStyle="bold" />
 
+                <HorizontalScrollView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:scrollbars="none">
+
+                    <com.google.android.material.chip.ChipGroup
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            app:singleSelection="false">
+
+                        <com.google.android.material.chip.Chip
+                                style="@style/Widget.MaterialComponents.Chip.Filter"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="@string/style_nature" />
+
+                        <com.google.android.material.chip.Chip
+                                style="@style/Widget.MaterialComponents.Chip.Filter"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="@string/style_city" />
+
+                        <com.google.android.material.chip.Chip
+                                style="@style/Widget.MaterialComponents.Chip.Filter"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="@string/style_food" />
+
+                        <com.google.android.material.chip.Chip
+                                style="@style/Widget.MaterialComponents.Chip.Filter"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="@string/style_route" />
+                    </com.google.android.material.chip.ChipGroup>
+                </HorizontalScrollView>
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -332,11 +376,14 @@
                     android:orientation="horizontal">
 
                     <LinearLayout
+                        android:id="@+id/card_feature_recommendation"
                         android:layout_width="0dp"
                         android:layout_height="104dp"
                         android:layout_marginEnd="8dp"
                         android:layout_weight="1"
                         android:background="@drawable/bg_soft_blue"
+                        android:clickable="true"
+                        android:focusable="true"
                         android:orientation="vertical"
                         android:padding="12dp">
 
@@ -359,11 +406,14 @@
                     </LinearLayout>
 
                     <LinearLayout
+                        android:id="@+id/card_feature_map"
                         android:layout_width="0dp"
                         android:layout_height="104dp"
                         android:layout_marginEnd="8dp"
                         android:layout_weight="1"
                         android:background="@drawable/bg_soft_mint"
+                        android:clickable="true"
+                        android:focusable="true"
                         android:orientation="vertical"
                         android:padding="12dp">
 
@@ -386,10 +436,13 @@
                     </LinearLayout>
 
                     <LinearLayout
+                        android:id="@+id/card_feature_summary"
                         android:layout_width="0dp"
                         android:layout_height="104dp"
                         android:layout_weight="1"
                         android:background="@drawable/bg_soft_coral"
+                        android:clickable="true"
+                        android:focusable="true"
                         android:orientation="vertical"
                         android:padding="12dp">
 
@@ -411,52 +464,6 @@
                             android:textSize="11sp" />
                     </LinearLayout>
                 </LinearLayout>
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="20dp"
-                    android:layout_marginBottom="8dp"
-                    android:text="@string/travel_style"
-                    android:textColor="@color/ink_muted"
-                    android:textSize="13sp"
-                    android:textStyle="bold" />
-
-                <HorizontalScrollView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:scrollbars="none">
-
-                    <com.google.android.material.chip.ChipGroup
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        app:singleSelection="false">
-
-                        <com.google.android.material.chip.Chip
-                            style="@style/Widget.MaterialComponents.Chip.Filter"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="@string/style_nature" />
-
-                        <com.google.android.material.chip.Chip
-                            style="@style/Widget.MaterialComponents.Chip.Filter"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="@string/style_city" />
-
-                        <com.google.android.material.chip.Chip
-                            style="@style/Widget.MaterialComponents.Chip.Filter"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="@string/style_food" />
-
-                        <com.google.android.material.chip.Chip
-                            style="@style/Widget.MaterialComponents.Chip.Filter"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="@string/style_route" />
-                    </com.google.android.material.chip.ChipGroup>
-                </HorizontalScrollView>
             </LinearLayout>
         </LinearLayout>
     </ScrollView>
