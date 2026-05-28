@@ -1,8 +1,11 @@
+[앱 다운로드](https://github.com/Jo-DanYeong/TripNest/releases/download/beta/app-release.apk)
 # TripNest
 
 TripNest는 여행지를 검색하면 AI 요약, 추천 장소, 주변 숙소/관광지/음식점을 함께 보여주는 Android 여행 추천 앱입니다. 광고성 글은 최대한 걸러내고, 장소별 관련 글과 출처를 따로 확인할 수 있도록 구성했습니다.
 
+
 ## 프로젝트 구조
+
 
 ```text
 TripNest/
