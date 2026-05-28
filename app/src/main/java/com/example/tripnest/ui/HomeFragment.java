@@ -1,5 +1,7 @@
 package com.example.tripnest.ui;
 
+import android.content.Context;
+import android.content.SharedPreferences;
 import android.app.DatePickerDialog;
 import android.os.Bundle;
 import android.view.KeyEvent;
@@ -68,6 +70,13 @@ public class HomeFragment extends Fragment {
                 );
 
         view.findViewById(R.id.btn_search).setOnClickListener(openResults);
+        view.findViewById(R.id.card_feature_recommendation).setOnClickListener(openResults);
+        view.findViewById(R.id.card_feature_map).setOnClickListener(v -> {
+            Bundle args = new Bundle();
+            args.putBoolean("pickMode", true);
+            Navigation.findNavController(view).navigate(R.id.action_homeFragment_to_mapPickFragment, args);
+        });
+        view.findViewById(R.id.card_feature_summary).setOnClickListener(v -> openSelectedTripSummary(view));
         searchInput.setOnEditorActionListener((textView, actionId, event) -> {
             boolean isSearchAction = actionId == EditorInfo.IME_ACTION_SEARCH;
             boolean isEnter = event != null
@@ -176,6 +185,16 @@ public class HomeFragment extends Fragment {
         args.putString("seniorCount", normalizeCount(seniorSpinner,0));
         args.putString("childCount", normalizeCount(childSpinner,0));
         Navigation.findNavController(view).navigate(R.id.action_homeFragment_to_resultFragment, args);
+    }
+
+    private void openSelectedTripSummary(@NonNull View view) {
+        SharedPreferences prefs = requireContext().getSharedPreferences(MyTripFragment.PREFS_NAME, Context.MODE_PRIVATE);
+        String selectedRoute = prefs.getString(MyTripFragment.KEY_LAST_ROUTE_PLAN, "");
+        if (selectedRoute == null || selectedRoute.trim().isEmpty()) {
+            Snackbar.make(view, R.string.selected_summary_empty_message, Snackbar.LENGTH_SHORT).show();
+            return;
+        }
+        Navigation.findNavController(view).navigate(R.id.myTripFragment);
     }
 
     private String normalizeCount(Spinner input, int fallback) {

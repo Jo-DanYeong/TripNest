@@ -6,6 +6,10 @@ $ErrorActionPreference = "Stop"
 $Root = Split-Path -Parent $PSScriptRoot
 $BackendDir = Join-Path $Root "backend"
 $LocalProperties = Join-Path $Root "local.properties"
+$ExpoEnvFiles = @(
+    (Join-Path $Root "mobile\.env"),
+    (Join-Path $Root "tripnest-expo\tripnest-expo\.env")
+)
 $TunnelLog = Join-Path $Root "tunnel.err.log"
 $Cloudflared = Get-Command cloudflared -ErrorAction SilentlyContinue
 
@@ -27,6 +31,42 @@ function Test-Health {
     } catch {
         return $false
     }
+}
+
+function Set-KeyValueFileValue {
+    param(
+        [string]$Path,
+        [hashtable]$Values
+    )
+
+    $dir = Split-Path -Parent $Path
+    if (-not (Test-Path $dir)) {
+        New-Item -ItemType Directory -Path $dir | Out-Null
+    }
+
+    $lines = @()
+    if (Test-Path $Path) {
+        $lines = @(Get-Content $Path)
+    }
+
+    foreach ($key in $Values.Keys) {
+        $value = $Values[$key]
+        $found = $false
+        $lines = @($lines | ForEach-Object {
+            if ($_ -match "^$([regex]::Escape($key))=") {
+                $found = $true
+                "$key=$value"
+            } else {
+                $_
+            }
+        })
+
+        if (-not $found) {
+            $lines += "$key=$value"
+        }
+    }
+
+    Set-Content -LiteralPath $Path -Value $lines
 }
 
 if (-not (Test-Health)) {
@@ -66,21 +106,22 @@ if (-not $TunnelUrl) {
     throw "Cloudflare Tunnel 주소를 가져오지 못했습니다. tunnel.err.log를 확인하세요."
 }
 
-$lines = Get-Content $LocalProperties
-$lines = $lines | ForEach-Object {
-    if ($_ -match "^BACKEND_BASE_URL=") {
-        "BACKEND_BASE_URL=$TunnelUrl"
-    } elseif ($_ -match "^BACKEND_FALLBACK_URL=") {
-        "BACKEND_FALLBACK_URL=$TunnelUrl"
-    } else {
-        $_
+Set-KeyValueFileValue -Path $LocalProperties -Values @{
+    "BACKEND_BASE_URL" = $TunnelUrl
+    "BACKEND_FALLBACK_URL" = $TunnelUrl
+}
+
+foreach ($envFile in $ExpoEnvFiles) {
+    Set-KeyValueFileValue -Path $envFile -Values @{
+        "EXPO_PUBLIC_BACKEND_BASE_URL" = $TunnelUrl
+        "EXPO_PUBLIC_BACKEND_FALLBACK_URL" = $TunnelUrl
     }
 }
-Set-Content -LiteralPath $LocalProperties -Value $lines
 
 Write-Host "TripNest backend: http://127.0.0.1:$Port"
 Write-Host "TripNest online URL: $TunnelUrl"
 Write-Host "local.properties updated."
+Write-Host "Expo .env files updated."
 
 Set-Location $Root
 & .\gradlew.bat assembleDebug

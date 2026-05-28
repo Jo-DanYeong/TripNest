@@ -128,6 +128,7 @@
     <string name="place_list_hint">카테고리를 고른 뒤 마음에 드는 장소를 담아 동선을 만들어보세요.</string>
     <string name="selected_route_title">내가 갈 동선</string>
     <string name="selected_route_empty">장소 카드에서 담기를 누르면 선택한 장소 기준으로 동선과 이동 예산을 계산합니다.</string>
+    <string name="selected_summary_empty_message">먼저 추천 결과에서 갈 장소를 담아 주세요.</string>
     <string name="selected_route_format">%1$s\n추정 비용: %2$s원</string>
     <string name="selected_route_single_format">%1$s\n장소를 하나 더 담으면 이동 동선을 계산합니다.</string>
     <string name="place_select">담기</string>

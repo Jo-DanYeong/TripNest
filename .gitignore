@@ -416,6 +416,7 @@ obj/
 
 # Mongo Explorer plugin
 mobile/
+tripnest-expo/
 .idea/mongoSettings.xml
 
 # Crashlytics plugin (for Android Studio and IntelliJ)

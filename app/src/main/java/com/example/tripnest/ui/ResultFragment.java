@@ -380,7 +380,7 @@ public class ResultFragment extends Fragment {
         }
         if (selectedPlaces.isEmpty()) {
             selectedRouteSummaryView.setText(R.string.selected_route_empty);
-            saveSelectedRouteState(routePlan == null ? "" : routePlan, estimateRouteBudget(routePlan, startDate, endDate));
+            saveSelectedRouteState("", 0);
             return;
         }
 
@@ -681,6 +681,12 @@ public class ResultFragment extends Fragment {
         if (text.contains("\uB86F\uB370\uC6D4\uB4DC") || text.contains("\uC5D0\uBC84\uB79C\uB4DC") || text.contains("\uB180\uC774") || text.contains("\uD14C\uB9C8\uD30C\uD06C") || text.contains("\uC6D4\uB4DC")) {
             return new AdmissionCost(59000, 52000, 46000, 47000);
         }
+        if (text.contains("워터피아") || text.contains("워터파크") || text.contains("오션월드") || text.contains("캐리비안")) {
+            return new AdmissionCost(76000, 76000, 76000, 58000);
+        }
+        if (text.contains("경복궁") || text.contains("경북궁") || text.contains("창덕궁") || text.contains("창경궁") || text.contains("덕수궁") || text.contains("종묘")) {
+            return new AdmissionCost(3000, 1500, 0, 1500);
+        }
         if (text.contains("\uC544\uCFE0\uC544") || text.contains("\uC804\uB9DD\uB300") || text.contains("\uBC15\uBB3C\uAD00") || text.contains("\uBBF8\uC220\uAD00")) {
             return new AdmissionCost(25000, 20000, 15000, 15000);
         }
@@ -711,6 +717,16 @@ public class ResultFragment extends Fragment {
                 || text.contains("\uB180\uC774")
                 || text.contains("\uD14C\uB9C8\uD30C\uD06C")
                 || text.contains("\uC6D4\uB4DC")
+                || text.contains("워터피아")
+                || text.contains("워터파크")
+                || text.contains("오션월드")
+                || text.contains("캐리비안")
+                || text.contains("경복궁")
+                || text.contains("경북궁")
+                || text.contains("창덕궁")
+                || text.contains("창경궁")
+                || text.contains("덕수궁")
+                || text.contains("종묘")
                 || text.contains("\uC544\uCFE0\uC544")
                 || text.contains("\uC804\uB9DD\uB300")
                 || text.contains("\uBC15\uBB3C\uAD00")
@@ -937,7 +953,6 @@ public class ResultFragment extends Fragment {
     }
 
     private void saveTripPlanningState() {
-        saveSelectedRouteState(routePlan == null ? "" : routePlan, estimateRouteBudget(routePlan, startDate, endDate));
         requireContext()
                 .getSharedPreferences(MyTripFragment.PREFS_NAME, android.content.Context.MODE_PRIVATE)
                 .edit()

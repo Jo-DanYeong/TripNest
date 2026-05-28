@@ -7,7 +7,9 @@
     "dev": "npm --prefix backend run dev",
     "dev:online": "npm --prefix backend run dev:online",
     "tunnel": "powershell -ExecutionPolicy Bypass -File scripts/start-cloudflare-tunnel.ps1",
-    "online-debug": "powershell -ExecutionPolicy Bypass -File scripts/start-online-debug.ps1"
+    "online-debug": "powershell -ExecutionPolicy Bypass -File scripts/start-online-debug.ps1",
+    "expo": "npm --prefix tripnest-expo/tripnest-expo start",
+    "expo:tunnel": "npm --prefix tripnest-expo/tripnest-expo run start -- --tunnel"
   },
   "engines": {
     "node": ">=18"
